@@ -27,6 +27,12 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_parser.add_argument("--vault", required=True, type=Path)
     ingest_parser.add_argument("--tags", default="")
     ingest_parser.add_argument("--lang", default="zh")
+
+    ingest_file_parser = subparsers.add_parser("ingest-file", help="Convert a local file and write it into raw/ as a markdown source.")
+    ingest_file_parser.add_argument("path", type=Path)
+    ingest_file_parser.add_argument("--vault", required=True, type=Path)
+    ingest_file_parser.add_argument("--tags", default="")
+    ingest_file_parser.add_argument("--lang", default="zh")
     return parser
 
 
@@ -76,6 +82,36 @@ def main(argv: list[str] | None = None) -> int:
 
         try:
             body, metadata = ingest.fetch_url_as_markdown(args.url)
+            output_path = ingest.generate_raw_page(
+                body,
+                metadata,
+                args.vault / "raw",
+                lang=args.lang,
+                tags=_parse_tags(args.tags),
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+
+        print(output_path)
+        return 0
+
+    if args.command == "ingest-file":
+        if not args.vault.exists():
+            print(f"Vault does not exist: {args.vault}", file=sys.stderr)
+            return 2
+        if not args.vault.is_dir():
+            print(f"Vault is not a directory: {args.vault}", file=sys.stderr)
+            return 2
+        if not args.path.exists():
+            print(f"File does not exist: {args.path}", file=sys.stderr)
+            return 2
+        if not args.path.is_file():
+            print(f"Path is not a file: {args.path}", file=sys.stderr)
+            return 2
+
+        try:
+            body, metadata = ingest.convert_file_to_markdown(str(args.path))
             output_path = ingest.generate_raw_page(
                 body,
                 metadata,

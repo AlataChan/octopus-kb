@@ -16,6 +16,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+ingest = ["markitdown>=0.1"]
 
 [project.scripts]
 octopus-kb = "octopus_kb_compound.cli:main"

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import builtins
 from pathlib import Path
+import sys
+import types
 
 import pytest
 
@@ -200,3 +203,103 @@ def test_cli_ingest_url_writes_raw_page(tmp_path: Path, monkeypatch: pytest.Monk
     assert str(output_path) in captured.out
     assert output_path.exists()
 
+
+def test_convert_file_to_markdown_uses_markitdown(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from octopus_kb_compound import ingest
+
+    source_file = tmp_path / "Q3-report.pdf"
+    source_file.write_text("ignored", encoding="utf-8")
+    calls: dict[str, object] = {}
+
+    fake_module = types.ModuleType("markitdown")
+
+    class FakeMarkItDown:
+        def convert(self, file_path: str):
+            calls["file_path"] = file_path
+            return types.SimpleNamespace(text_content="Converted body without heading.\n")
+
+    fake_module.MarkItDown = FakeMarkItDown
+    monkeypatch.setitem(sys.modules, "markitdown", fake_module)
+    monkeypatch.setattr(ingest, "_now_iso", lambda: "2026-04-06T16:30:00+08:00")
+
+    body, metadata = ingest.convert_file_to_markdown(str(source_file))
+
+    assert body == "Converted body without heading.\n"
+    assert calls["file_path"] == str(source_file)
+    assert metadata == {
+        "source_file": "Q3-report.pdf",
+        "original_format": "pdf",
+        "converted_at": "2026-04-06T16:30:00+08:00",
+        "ingest_method": "markitdown",
+        "title": "Q3-report",
+    }
+
+
+def test_convert_file_to_markdown_raises_without_markitdown(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from octopus_kb_compound import ingest
+
+    source_file = tmp_path / "report.pdf"
+    source_file.write_text("ignored", encoding="utf-8")
+
+    original_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "markitdown":
+            raise ImportError("No module named 'markitdown'")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.delitem(sys.modules, "markitdown", raising=False)
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    with pytest.raises(RuntimeError, match=r"pip install octopus-kb-compound\[ingest\]"):
+        ingest.convert_file_to_markdown(str(source_file))
+
+
+def test_cli_ingest_file_writes_raw_page(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    from octopus_kb_compound import ingest
+
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    source_file = tmp_path / "report.pdf"
+    source_file.write_text("ignored", encoding="utf-8")
+
+    def fake_convert(file_path: str):
+        assert file_path == str(source_file)
+        return (
+            "# Q3 Research Report\n\nThird-quarter architecture review.\n",
+            {
+                "title": "Q3 Research Report",
+                "source_file": "report.pdf",
+                "original_format": "pdf",
+                "converted_at": "2026-04-06T16:30:00+08:00",
+                "ingest_method": "markitdown",
+            },
+        )
+
+    monkeypatch.setattr(ingest, "convert_file_to_markdown", fake_convert)
+
+    exit_code = main(
+        [
+            "ingest-file",
+            str(source_file),
+            "--vault",
+            str(vault),
+            "--tags",
+            "report,quarterly",
+            "--lang",
+            "zh",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    output_path = vault / "raw" / "q3-research-report.md"
+    raw = output_path.read_text(encoding="utf-8")
+    frontmatter, body = parse_document(raw)
+
+    assert exit_code == 0
+    assert str(output_path) in captured.out
+    assert frontmatter["source_file"] == "report.pdf"
+    assert frontmatter["original_format"] == "pdf"
+    assert frontmatter["ingest_method"] == "markitdown"
+    assert frontmatter["summary"] == "Third-quarter architecture review."
+    assert body.startswith("# Q3 Research Report")

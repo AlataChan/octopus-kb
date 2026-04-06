@@ -61,6 +61,28 @@ def fetch_url_as_markdown(url: str, *, timeout: int = 30) -> tuple[str, dict[str
     }
 
 
+def convert_file_to_markdown(file_path: str) -> tuple[str, dict[str, str]]:
+    try:
+        from markitdown import MarkItDown
+    except ImportError as exc:
+        raise RuntimeError(
+            "markitdown is required for file conversion. "
+            "Install with: pip install octopus-kb-compound[ingest]"
+        ) from exc
+
+    source_path = Path(file_path)
+    result = MarkItDown().convert(str(source_path))
+    body = result.text_content
+    title = _extract_title(body) or source_path.stem
+    return body, {
+        "source_file": source_path.name,
+        "original_format": source_path.suffix.lstrip("."),
+        "converted_at": _now_iso(),
+        "ingest_method": "markitdown",
+        "title": title,
+    }
+
+
 def generate_raw_page(
     body: str,
     metadata: dict[str, str],
