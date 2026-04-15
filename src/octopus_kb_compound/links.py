@@ -25,6 +25,13 @@ def build_alias_index(pages: list[PageRecord]) -> dict[str, str]:
     }
 
 
+def frontmatter_aliases(page: PageRecord) -> list[str]:
+    raw_aliases = page.frontmatter.get("aliases", [])
+    if not isinstance(raw_aliases, list):
+        return []
+    return [str(item) for item in raw_aliases]
+
+
 def find_alias_collisions(pages: list[PageRecord]) -> dict[str, list[str]]:
     alias_targets = _collect_alias_targets(pages)
     return {
@@ -81,9 +88,7 @@ def suggest_links(
 
 def _page_aliases(page: PageRecord) -> list[str]:
     aliases = [page.title]
-    raw_aliases = page.frontmatter.get("aliases", [])
-    if isinstance(raw_aliases, list):
-        aliases.extend(str(item) for item in raw_aliases)
+    aliases.extend(frontmatter_aliases(page))
     aliases.extend(_path_aliases(page.path))
     return _dedupe_preserve_order(aliases)
 

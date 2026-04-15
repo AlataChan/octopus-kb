@@ -6,6 +6,7 @@
 
 - Roadmap implementation execution plan and CLI baseline regression guard.
 - Structured page metadata helpers for concept, entity, comparison, timeline, and changelog pages.
+- Lint checks for duplicate canonical pages, unresolved frontmatter aliases, and canonical alias collisions.
 
 ## v0.1.0 - 2026-04-05
 

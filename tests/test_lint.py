@@ -99,6 +99,94 @@ def test_lint_reports_alias_collisions():
     assert any(f.code == "ALIAS_COLLISION" for f in findings)
 
 
+def test_lint_reports_duplicate_canonical_pages():
+    pages = [
+        PageRecord(
+            path="wiki/concepts/RAG.md",
+            title="RAG",
+            body="",
+            frontmatter={
+                "title": "RAG",
+                "role": "concept",
+                "layer": "wiki",
+                "summary": "RAG overview.",
+                "canonical_name": "Retrieval Augmented Generation",
+            },
+        ),
+        PageRecord(
+            path="wiki/concepts/Retrieval Augmented Generation.md",
+            title="Retrieval Augmented Generation",
+            body="",
+            frontmatter={
+                "title": "Retrieval Augmented Generation",
+                "role": "concept",
+                "layer": "wiki",
+                "summary": "Duplicate overview.",
+                "source_of_truth": "canonical",
+            },
+        ),
+    ]
+
+    findings = lint_pages(pages)
+
+    assert any(f.code == "DUPLICATE_CANONICAL_PAGE" for f in findings)
+
+
+def test_lint_reports_unresolved_frontmatter_alias():
+    pages = [
+        PageRecord(
+            path="wiki/entities/Vector Store.md",
+            title="Vector Store",
+            body="",
+            frontmatter={
+                "title": "Vector Store",
+                "role": "entity",
+                "layer": "wiki",
+                "summary": "Vector store.",
+                "aliases": ["!!!"],
+            },
+        ),
+    ]
+
+    findings = lint_pages(pages)
+
+    assert any(f.code == "UNRESOLVED_ALIAS" for f in findings)
+
+
+def test_lint_reports_canonical_alias_collision():
+    pages = [
+        PageRecord(
+            path="wiki/entities/Vector Store.md",
+            title="Vector Store",
+            body="",
+            frontmatter={
+                "title": "Vector Store",
+                "role": "entity",
+                "layer": "wiki",
+                "summary": "Vector store.",
+                "canonical_name": "Vector Store",
+                "aliases": ["Chunking"],
+            },
+        ),
+        PageRecord(
+            path="wiki/entities/Chunking.md",
+            title="Chunking",
+            body="[[Vector Store]]",
+            frontmatter={
+                "title": "Chunking",
+                "role": "entity",
+                "layer": "wiki",
+                "summary": "Chunking.",
+                "canonical_name": "Chunking",
+            },
+        ),
+    ]
+
+    findings = lint_pages(pages)
+
+    assert any(f.code == "CANONICAL_ALIAS_COLLISION" for f in findings)
+
+
 def test_lint_resolves_filename_and_relative_path_links():
     pages = [
         PageRecord(
