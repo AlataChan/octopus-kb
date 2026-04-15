@@ -7,5 +7,6 @@ __all__ = [
     "lint",
     "models",
     "page_types",
+    "summary",
     "vault",
 ]

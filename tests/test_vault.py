@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from octopus_kb_compound.profile import VaultProfile
+from octopus_kb_compound.summary import summarize_vault
 from octopus_kb_compound.vault import load_page, scan_markdown_files
 
 
@@ -38,3 +39,18 @@ def test_scan_markdown_files_respects_profile_excludes(tmp_path: Path):
     pages = scan_markdown_files(tmp_path, VaultProfile(exclude_globs=["output/**"]))
 
     assert [Path(page.path).as_posix() for page in pages] == ["wiki/note.md"]
+
+
+def test_summarize_vault_counts_pages_by_type_role_and_layer():
+    repo_root = Path(__file__).resolve().parents[1]
+
+    summary = summarize_vault(repo_root / "examples" / "minimal-vault")
+
+    assert summary.total_pages == 7
+    assert summary.types["concept"] == 1
+    assert summary.types["entity"] == 2
+    assert summary.roles["raw_source"] == 1
+    assert summary.layers["wiki"] == 6
+    assert summary.entries["schema"] == "present"
+    assert summary.entries["index"] == "present"
+    assert summary.entries["log"] == "present"

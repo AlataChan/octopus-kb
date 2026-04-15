@@ -8,6 +8,7 @@ from octopus_kb_compound import ingest
 from octopus_kb_compound.links import suggest_links
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.profile import load_vault_profile
+from octopus_kb_compound.summary import render_summary, summarize_vault
 from octopus_kb_compound.vault import load_page, scan_markdown_files
 
 
@@ -33,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_file_parser.add_argument("--vault", required=True, type=Path)
     ingest_file_parser.add_argument("--tags", default="")
     ingest_file_parser.add_argument("--lang", default="zh")
+
+    summary_parser = subparsers.add_parser("vault-summary", help="Summarize vault structure, entries, and lint findings.")
+    summary_parser.add_argument("vault", type=Path)
     return parser
 
 
@@ -124,6 +128,17 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         print(output_path)
+        return 0
+
+    if args.command == "vault-summary":
+        if not args.vault.exists():
+            print(f"Vault does not exist: {args.vault}", file=sys.stderr)
+            return 2
+        if not args.vault.is_dir():
+            print(f"Vault is not a directory: {args.vault}", file=sys.stderr)
+            return 2
+
+        print(render_summary(summarize_vault(args.vault)))
         return 0
 
     parser.error("Unknown command")
