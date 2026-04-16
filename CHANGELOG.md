@@ -10,6 +10,7 @@
 - `vault-summary` CLI command for deterministic vault counts, entry presence, and lint finding summaries.
 - `impacted-pages` CLI command for deterministic maintenance impact discovery.
 - Version bump to `0.2.0` for the expanded public CLI and metadata/lint contract.
+- Deterministic retrieval bundle helpers for schema, index, concept, entity, and raw-source traversal.
 
 ## v0.1.0 - 2026-04-05
 

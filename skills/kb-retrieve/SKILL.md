@@ -25,6 +25,8 @@ The goal is not generic RAG. The goal is to reuse the persistent wiki first, the
    - synthesis
    - open gaps
 
+When available, use `octopus_kb_compound.retrieve.build_retrieval_bundle()` to produce the ordered schema, index, concept, entity, and raw-source page set before reading files manually.
+
 ## Rules
 
 - Prefer concept pages over raw sources for orientation.
