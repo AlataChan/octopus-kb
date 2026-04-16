@@ -91,6 +91,11 @@ The skill treats the wiki as a living artifact, not a pile of notes.
 - `ingest-url <url> --vault <path> [--tags tag1,tag2] [--lang zh]`: fetch a public URL through Jina Reader and write a new `raw/*.md` page
 - `lint <vault>`: find broken links, orphan concept pages, and missing metadata
 - `suggest-links <page> --vault <vault>`: propose canonical wikilinks for an existing page
+- `vault-summary <vault>`: report page counts, entry-file presence, and lint finding counts
+- `impacted-pages <page> --vault <vault>`: list pages likely affected by a page change
+- `plan-maintenance <page> --vault <vault>`: emit non-mutating follow-up actions for wiki maintenance
+- `inspect-vault <vault>` / `normalize-vault <vault>`: inspect and stage conservative migration fixes
+- `export-graph <vault> --out <dir>`: write `nodes.json`, `edges.json`, `manifest.json`, and `aliases.json`
 
 `ingest-url` uses `https://r.jina.ai/` as a third-party conversion service. Only public `http/https` URLs are allowed, and the command rejects localhost and private-network targets.
 

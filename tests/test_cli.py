@@ -22,6 +22,7 @@ def test_cli_parser_includes_existing_baseline_commands():
         "plan-maintenance",
         "inspect-vault",
         "normalize-vault",
+        "export-graph",
     } <= commands
 
 
@@ -145,3 +146,17 @@ def test_cli_inspect_vault_reports_missing_files(tmp_path: Path, capsys):
     assert exit_code == 0
     assert "missing_file\tAGENTS.md" in captured.out
     assert "missing_frontmatter\tnote.md" in captured.out
+
+
+def test_cli_export_graph_writes_artifacts(tmp_path: Path):
+    vault = tmp_path / "vault"
+    page = vault / "wiki" / "INDEX.md"
+    page.parent.mkdir(parents=True)
+    page.write_text("---\ntitle: INDEX\nrole: index\nlayer: wiki\n---\n", encoding="utf-8")
+    out_dir = tmp_path / "out"
+
+    exit_code = main(["export-graph", str(vault), "--out", str(out_dir)])
+
+    assert exit_code == 0
+    assert (out_dir / "nodes.json").exists()
+    assert (out_dir / "edges.json").exists()

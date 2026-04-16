@@ -13,6 +13,7 @@
 - Deterministic retrieval bundle helpers for schema, index, concept, entity, and raw-source traversal.
 - Non-mutating maintenance planner and `plan-maintenance` CLI command for follow-up actions.
 - Vault migration inspection and staged frontmatter normalization commands with conservative safety defaults.
+- Graph export artifacts and `export-graph` CLI command for nodes, edges, manifests, and aliases.
 
 ## v0.1.0 - 2026-04-05
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 from octopus_kb_compound import ingest
+from octopus_kb_compound.export import export_graph_artifacts
 from octopus_kb_compound.impact import find_impacted_pages
 from octopus_kb_compound.links import suggest_links
 from octopus_kb_compound.lint import lint_pages
@@ -56,6 +57,10 @@ def build_parser() -> argparse.ArgumentParser:
     normalize_parser.add_argument("vault", type=Path)
     normalize_parser.add_argument("--apply", action="store_true")
     normalize_parser.add_argument("--in-place", action="store_true")
+
+    export_parser = subparsers.add_parser("export-graph", help="Export graph-aware JSON artifacts for retrieval systems.")
+    export_parser.add_argument("vault", type=Path)
+    export_parser.add_argument("--out", required=True, type=Path)
     return parser
 
 
@@ -214,6 +219,21 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(render_migration_report(report))
         return 2 if report.parse_failures else 0
+
+    if args.command == "export-graph":
+        if not args.vault.exists():
+            print(f"Vault does not exist: {args.vault}", file=sys.stderr)
+            return 2
+        if not args.vault.is_dir():
+            print(f"Vault is not a directory: {args.vault}", file=sys.stderr)
+            return 2
+        try:
+            export_graph_artifacts(args.vault, args.out)
+        except OSError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(args.out)
+        return 0
 
     parser.error("Unknown command")
     return 2

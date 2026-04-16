@@ -1,6 +1,7 @@
 """octopus-kb-compound core package."""
 
 __all__ = [
+    "export",
     "frontmatter",
     "impact",
     "ingest",
