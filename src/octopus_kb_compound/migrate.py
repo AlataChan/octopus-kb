@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import os
 import shutil
+import tempfile
 
 from octopus_kb_compound.frontmatter import parse_document, render_frontmatter
 from octopus_kb_compound.models import PageMeta
@@ -21,6 +22,13 @@ class MigrationReport:
     normalized_files: list[str] = field(default_factory=list)
     staging_dir: str | None = None
     backup_dir: str | None = None
+
+
+@dataclass(slots=True)
+class _RollbackLedger:
+    backup_root: Path
+    modified: list[str] = field(default_factory=list)
+    created: list[str] = field(default_factory=list)
 
 
 def inspect_vault_for_migration(root: str | Path) -> MigrationReport:
@@ -53,11 +61,11 @@ def normalize_vault(root: str | Path, *, apply: bool = False, in_place: bool = F
     if in_place:
         backup_dir = root_path / ".octopus-kb-migration" / "backups" / timestamp
         report.backup_dir = str(backup_dir)
+        ledger = _RollbackLedger(backup_root=backup_dir)
         try:
-            _backup_files(root_path, backup_dir, report.pages_missing_frontmatter + report.missing_files)
-            _write_normalized_files(root_path, root_path, report)
+            _apply_in_place(root_path, report, ledger)
         except OSError:
-            _restore_backup(root_path, backup_dir)
+            _rollback(root_path, ledger)
             raise
         return report
 
@@ -85,6 +93,82 @@ def render_migration_report(report: MigrationReport) -> str:
     return "\n".join(lines)
 
 
+def _apply_in_place(root: Path, report: MigrationReport, ledger: _RollbackLedger) -> None:
+    plans: list[tuple[Path, str, bool]] = []
+    for rel in report.pages_missing_frontmatter:
+        source = root / rel
+        existed = source.exists()
+        raw = source.read_text(encoding="utf-8", errors="replace") if existed else ""
+        content = f"{render_frontmatter(_default_meta_for_path(Path(rel)))}\n{raw.rstrip()}\n"
+        plans.append((source, content, existed))
+    for rel in report.missing_files:
+        target = root / rel
+        plans.append((target, _default_required_file(rel), target.exists()))
+
+    staged: list[tuple[Path, Path, bool]] = []
+    try:
+        for target, content, existed in plans:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            handle = tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=str(target.parent),
+                prefix=f".{target.name}.",
+                suffix=".octopus-tmp",
+                delete=False,
+            )
+            try:
+                handle.write(content)
+            finally:
+                handle.close()
+            staged.append((Path(handle.name), target, existed))
+    except OSError:
+        for tmp, _, _ in staged:
+            _safe_unlink(tmp)
+        raise
+
+    try:
+        for tmp, target, existed in staged:
+            rel = target.relative_to(root).as_posix()
+            if existed:
+                backup = ledger.backup_root / rel
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(target, backup)
+                ledger.modified.append(rel)
+            else:
+                ledger.created.append(rel)
+            _replace_staged_file(tmp, target)
+            report.normalized_files.append(rel)
+    except OSError:
+        for tmp, _, _ in staged:
+            _safe_unlink(tmp)
+        raise
+
+
+def _replace_staged_file(tmp: Path, target: Path) -> None:
+    os.replace(tmp, target)
+
+
+def _rollback(root: Path, ledger: _RollbackLedger) -> None:
+    for rel in ledger.modified:
+        backup = ledger.backup_root / rel
+        if backup.exists():
+            target = root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(backup, target)
+    for rel in ledger.created:
+        _safe_unlink(root / rel)
+    for stray in root.rglob("*.octopus-tmp"):
+        _safe_unlink(stray)
+
+
+def _safe_unlink(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def _write_normalized_files(source_root: Path, target_root: Path, report: MigrationReport) -> None:
     for rel in report.pages_missing_frontmatter:
         source = source_root / rel
@@ -109,27 +193,6 @@ def _copy_markdown_tree(source_root: Path, target_root: Path) -> None:
         target = target_root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
-
-
-def _backup_files(source_root: Path, backup_root: Path, relatives: list[str]) -> None:
-    for rel in relatives:
-        source = source_root / rel
-        if not source.exists():
-            continue
-        target = backup_root / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-
-
-def _restore_backup(target_root: Path, backup_root: Path) -> None:
-    if not backup_root.exists():
-        return
-    for backup in sorted(backup_root.rglob("*")):
-        if not backup.is_file():
-            continue
-        target = target_root / backup.relative_to(backup_root)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(backup, target)
 
 
 def _atomic_write(path: Path, content: str) -> None:
