@@ -7,6 +7,7 @@
 - Add committed reference corpus for the eval harness.
 - Add eval task suite format and loader.
 - Add grep and octopus-kb eval path runners.
+- Add deterministic eval scoring and suite runner.
 
 ## [0.5.0] - 2026-04-18
 
