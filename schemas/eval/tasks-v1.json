@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "octopus-kb/eval/tasks-v1",
+  "title": "octopus-kb Eval Task Suite v1",
+  "type": "object",
+  "required": ["version", "corpus", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "corpus": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "required": ["id", "type", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["fact_lookup", "relationship_trace", "drift_detection"]
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["fact_lookup", "relationship_trace"]
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["query"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "fact_lookup"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "type": "object",
+                "required": ["canonical_path"],
+                "additionalProperties": true,
+                "properties": {
+                  "canonical_path": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "relationship_trace"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "type": "object",
+                "required": ["related_paths"],
+                "additionalProperties": true,
+                "properties": {
+                  "related_paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "drift_detection"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "type": "object",
+                "required": ["stale_paths"],
+                "additionalProperties": true,
+                "properties": {
+                  "stale_paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

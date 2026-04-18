@@ -5,6 +5,7 @@
 ### Added
 
 - Add committed reference corpus for the eval harness.
+- Add eval task suite format and loader.
 
 ## [0.5.0] - 2026-04-18
 

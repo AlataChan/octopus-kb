@@ -6,6 +6,8 @@ role: concept
 layer: wiki
 source_of_truth: canonical
 tags: []
+aliases:
+  - "RAG Ops"
 related_entities:
   - "Vector Store"
   - "Knowledge Graph"

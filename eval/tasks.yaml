@@ -1,0 +1,22 @@
+version: 1
+corpus: eval/corpora/small-vault
+tasks:
+  - id: fact-001
+    type: fact_lookup
+    query: "RAG Ops"
+    expected:
+      canonical_path: "wiki/concepts/RAG Operations.md"
+
+  - id: rel-001
+    type: relationship_trace
+    query: "wiki/concepts/RAG Operations.md"
+    expected:
+      related_paths:
+        - "wiki/entities/Vector Store.md"
+        - "wiki/entities/Knowledge Graph.md"
+
+  - id: drift-001
+    type: drift_detection
+    expected:
+      stale_paths:
+        - "wiki/concepts/RAG Operations.md"
