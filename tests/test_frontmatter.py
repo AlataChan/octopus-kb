@@ -28,9 +28,9 @@ def test_render_frontmatter_writes_role_layer_and_workflow():
     assert "role: schema" in frontmatter
     assert "layer: wiki" in frontmatter
     assert "workflow:" in frontmatter
-    assert "  - ingest" in frontmatter
-    assert "  - lint" in frontmatter
-    assert "  - query" in frontmatter
+    assert '  - "ingest"' in frontmatter
+    assert '  - "lint"' in frontmatter
+    assert '  - "query"' in frontmatter
 
 
 def test_render_frontmatter_writes_empty_tags_as_empty_list():
@@ -102,6 +102,41 @@ def test_render_frontmatter_escapes_backslashes_and_whitespace_summary():
     assert parsed["summary"] == ""
 
 
+def test_render_frontmatter_quotes_scalars_containing_special_characters():
+    meta = PageMeta(
+        title="t",
+        page_type="note",
+        lang="en",
+        related_entities=["Vector: Store", "Foo # bar"],
+        tags=["release: 2026", "api/v1"],
+        original_format="md: variant",
+        ingest_method="jina: reader",
+        status="active",
+        source_of_truth="canonical",
+        workflow=["review: weekly"],
+        summary="",
+    )
+    rendered = render_frontmatter(meta)
+    assert '- "Vector: Store"' in rendered
+    assert '- "Foo # bar"' in rendered
+    assert '- "release: 2026"' in rendered
+    assert '- "api/v1"' in rendered
+    assert 'original_format: "md: variant"' in rendered
+    assert 'ingest_method: "jina: reader"' in rendered
+    assert 'status: "active"' in rendered
+    assert 'source_of_truth: "canonical"' in rendered
+    assert '- "review: weekly"' in rendered
+
+    frontmatter, _ = parse_document(rendered + "\n")
+    assert frontmatter["related_entities"] == ["Vector: Store", "Foo # bar"]
+    assert frontmatter["tags"] == ["release: 2026", "api/v1"]
+    assert frontmatter["original_format"] == "md: variant"
+    assert frontmatter["ingest_method"] == "jina: reader"
+    assert frontmatter["status"] == "active"
+    assert frontmatter["source_of_truth"] == "canonical"
+    assert frontmatter["workflow"] == ["review: weekly"]
+
+
 def test_make_entity_meta_renders_expected_fields():
     meta = make_entity_meta(
         "Vector Store",
@@ -117,10 +152,10 @@ def test_make_entity_meta_renders_expected_fields():
     assert isinstance(meta, PageMeta)
     assert "type: entity" in frontmatter
     assert 'canonical_name: "Vector Store"' in frontmatter
-    assert "status: active" in frontmatter
-    assert "source_of_truth: canonical" in frontmatter
+    assert 'status: "active"' in frontmatter
+    assert 'source_of_truth: "canonical"' in frontmatter
     assert "related_entities:" in frontmatter
-    assert "  - Chunking" in frontmatter
+    assert '  - "Chunking"' in frontmatter
     assert "aliases:" in frontmatter
     assert parsed["canonical_name"] == "Vector Store"
     assert parsed["related_entities"] == ["Chunking"]

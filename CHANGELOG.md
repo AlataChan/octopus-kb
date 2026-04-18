@@ -5,6 +5,7 @@
 ### Fixed
 
 - fix: gate canonical identity for raw sources; add wiki path-stem fallback.
+- fix: quote user/content-derived frontmatter scalars and list items.
 
 ### Added
 

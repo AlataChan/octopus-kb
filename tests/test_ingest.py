@@ -95,7 +95,7 @@ def test_render_frontmatter_writes_ingest_provenance_fields() -> None:
     parsed, _ = parse_document(frontmatter + "\n# Body\n")
 
     assert 'source_url: "https://arxiv.org/abs/2312.10997"' in frontmatter
-    assert "ingest_method: jina-reader" in frontmatter
+    assert 'ingest_method: "jina-reader"' in frontmatter
     assert 'fetched_at: "2026-04-06T15:30:00+08:00"' in frontmatter
     assert parsed["source_url"] == "https://arxiv.org/abs/2312.10997"
     assert parsed["ingest_method"] == "jina-reader"

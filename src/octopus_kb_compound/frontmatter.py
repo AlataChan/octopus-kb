@@ -22,13 +22,13 @@ def render_frontmatter(meta: PageMeta) -> str:
     if meta.canonical_name:
         lines.append(f'canonical_name: "{_quote(meta.canonical_name)}"')
     if meta.status:
-        lines.append(f"status: {meta.status}")
+        lines.append(f'status: "{_quote(meta.status)}"')
     if meta.source_of_truth:
-        lines.append(f"source_of_truth: {meta.source_of_truth}")
+        lines.append(f'source_of_truth: "{_quote(meta.source_of_truth)}"')
     if meta.workflow:
         lines.append("workflow:")
         for item in meta.workflow:
-            lines.append(f"  - {item}")
+            lines.append(f'  - "{_quote(item)}"')
     if meta.authors:
         lines.append("authors:")
         for author in meta.authors:
@@ -40,7 +40,7 @@ def render_frontmatter(meta: PageMeta) -> str:
     if meta.related_entities:
         lines.append("related_entities:")
         for entity in meta.related_entities:
-            lines.append(f"  - {entity}")
+            lines.append(f'  - "{_quote(entity)}"')
     if meta.changelog:
         lines.append("changelog:")
         for entry in meta.changelog:
@@ -52,7 +52,7 @@ def render_frontmatter(meta: PageMeta) -> str:
     if meta.tags:
         lines.append("tags:")
         for tag in meta.tags:
-            lines.append(f"  - {tag}")
+            lines.append(f'  - "{_quote(tag)}"')
     else:
         lines.append("tags: []")
     if meta.source_url:
@@ -60,9 +60,9 @@ def render_frontmatter(meta: PageMeta) -> str:
     if meta.source_file:
         lines.append(f'source_file: "{_quote(meta.source_file)}"')
     if meta.original_format:
-        lines.append(f"original_format: {meta.original_format}")
+        lines.append(f'original_format: "{_quote(meta.original_format)}"')
     if meta.ingest_method:
-        lines.append(f"ingest_method: {meta.ingest_method}")
+        lines.append(f'ingest_method: "{_quote(meta.ingest_method)}"')
     if meta.fetched_at:
         lines.append(f'fetched_at: "{_quote(meta.fetched_at)}"')
     if meta.converted_at:
