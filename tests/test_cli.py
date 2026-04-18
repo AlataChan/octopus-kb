@@ -23,6 +23,7 @@ def test_cli_parser_includes_existing_baseline_commands():
         "inspect-vault",
         "normalize-vault",
         "export-graph",
+        "validate-frontmatter",
     } <= commands
 
 
@@ -207,3 +208,84 @@ def test_cli_ingest_file_returns_1_when_markitdown_missing(tmp_path, monkeypatch
     from octopus_kb_compound.cli import main
     rc = main(["ingest-file", str(source), "--vault", str(vault)])
     assert rc == 1
+
+
+def test_cli_validate_frontmatter_reports_invalid_enum(tmp_path):
+    vault = tmp_path / "vault"
+    (vault / "wiki").mkdir(parents=True)
+    (vault / "wiki" / "bad.md").write_text(
+        '---\ntitle: "bad"\ntype: concept\nlang: en\nrole: not-a-real-role\n'
+        'layer: wiki\nsummary: "s"\ntags: []\n---\n',
+        encoding="utf-8",
+    )
+    (vault / "AGENTS.md").write_text("# Schema\n", encoding="utf-8")
+    (vault / "wiki" / "INDEX.md").write_text("# Index\n", encoding="utf-8")
+    (vault / "wiki" / "LOG.md").write_text("# Log\n", encoding="utf-8")
+
+    import io
+    import json
+    import sys
+
+    from octopus_kb_compound.cli import main
+
+    buf = io.StringIO()
+    original = sys.stdout
+    sys.stdout = buf
+    try:
+        rc = main(["validate-frontmatter", str(vault), "--json"])
+    finally:
+        sys.stdout = original
+
+    assert rc == 1
+    data = json.loads(buf.getvalue())
+    codes = {finding["code"] for finding in data["findings"]}
+    assert "SCHEMA_INVALID_FIELD" in codes
+
+
+def test_cli_validate_frontmatter_reports_malformed_as_parse_failure(tmp_path):
+    vault = tmp_path / "vault"
+    (vault / "wiki").mkdir(parents=True)
+    (vault / "AGENTS.md").write_text("# Schema\n", encoding="utf-8")
+    (vault / "wiki" / "INDEX.md").write_text("# Index\n", encoding="utf-8")
+    (vault / "wiki" / "LOG.md").write_text("# Log\n", encoding="utf-8")
+    (vault / "wiki" / "broken.md").write_text(
+        '---\ntitle: "b"\nrole: concept\n# no closing fence\nbody here\n',
+        encoding="utf-8",
+    )
+
+    import io
+    import json
+    import sys
+    from octopus_kb_compound.cli import main
+
+    buf = io.StringIO()
+    original = sys.stdout
+    sys.stdout = buf
+    try:
+        rc = main(["validate-frontmatter", str(vault), "--json"])
+    finally:
+        sys.stdout = original
+
+    assert rc == 1
+    data = json.loads(buf.getvalue())
+    codes = {finding["code"] for finding in data["findings"]}
+    assert "PARSE_FAILURE" in codes
+    assert any(f["path"].endswith("broken.md") for f in data["findings"])
+
+
+def test_cli_validate_frontmatter_exits_0_when_clean(tmp_path):
+    vault = tmp_path / "vault"
+    (vault / "wiki").mkdir(parents=True)
+    (vault / "wiki" / "good.md").write_text(
+        '---\ntitle: "good"\ntype: concept\nlang: en\nrole: concept\n'
+        'layer: wiki\nsummary: "s"\ntags: []\n---\n',
+        encoding="utf-8",
+    )
+    (vault / "AGENTS.md").write_text("# Schema\n", encoding="utf-8")
+    (vault / "wiki" / "INDEX.md").write_text("# Index\n", encoding="utf-8")
+    (vault / "wiki" / "LOG.md").write_text("# Log\n", encoding="utf-8")
+
+    from octopus_kb_compound.cli import main
+
+    rc = main(["validate-frontmatter", str(vault)])
+    assert rc == 0

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
 from octopus_kb_compound import ingest
 from octopus_kb_compound.export import export_graph_artifacts
+from octopus_kb_compound.frontmatter import FrontmatterError, parse_document
 from octopus_kb_compound.impact import find_impacted_pages
 from octopus_kb_compound.ingest import OptionalDependencyMissing
 from octopus_kb_compound.links import suggest_links
@@ -13,6 +15,7 @@ from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.migrate import inspect_vault_for_migration, normalize_vault, render_migration_report
 from octopus_kb_compound.planner import plan_maintenance, render_plan
 from octopus_kb_compound.profile import load_vault_profile
+from octopus_kb_compound.schema import validate_frontmatter
 from octopus_kb_compound.summary import render_summary, summarize_vault
 from octopus_kb_compound.vault import load_page, scan_markdown_files
 
@@ -62,6 +65,13 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser = subparsers.add_parser("export-graph", help="Export graph-aware JSON artifacts for retrieval systems.")
     export_parser.add_argument("vault", type=Path)
     export_parser.add_argument("--out", required=True, type=Path)
+
+    validate_frontmatter_parser = subparsers.add_parser(
+        "validate-frontmatter",
+        help="Validate frontmatter blocks against the PageMeta schema.",
+    )
+    validate_frontmatter_parser.add_argument("path", type=Path)
+    validate_frontmatter_parser.add_argument("--json", action="store_true")
     return parser
 
 
@@ -209,6 +219,23 @@ def main(argv: list[str] | None = None) -> int:
         print(args.out)
         return 0
 
+    if args.command == "validate-frontmatter":
+        try:
+            findings = _collect_frontmatter_findings(args.path)
+        except OSError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+
+        if args.json:
+            print(json.dumps({"findings": findings}, ensure_ascii=False))
+        else:
+            for finding in findings:
+                print(
+                    f"{finding['code']}\t{finding['path']}\t"
+                    f"{finding['field']}\t{finding['message']}"
+                )
+        return 1 if findings else 0
+
     parser.error("Unknown command")
     return 2
 
@@ -235,6 +262,50 @@ def _validate_page_file(page: Path) -> int | None:
 
 def _parse_tags(raw_tags: str) -> list[str]:
     return [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+
+
+def _collect_frontmatter_findings(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        raise OSError(f"Path does not exist: {path}")
+    if path.is_file():
+        return _validate_frontmatter_file(path, str(path))
+    if not path.is_dir():
+        raise OSError(f"Path is not a file or directory: {path}")
+
+    findings: list[dict[str, str]] = []
+    for md_path in sorted(path.rglob("*.md")):
+        rel = md_path.relative_to(path)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        findings.extend(_validate_frontmatter_file(md_path, rel.as_posix()))
+    return findings
+
+
+def _validate_frontmatter_file(path: Path, display_path: str) -> list[dict[str, str]]:
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    if not raw.replace("\r\n", "\n").replace("\r", "\n").startswith("---\n"):
+        return []
+    try:
+        frontmatter, _ = parse_document(raw, strict=True)
+    except FrontmatterError as exc:
+        return [
+            {
+                "code": "PARSE_FAILURE",
+                "path": display_path,
+                "field": "",
+                "message": str(exc),
+            }
+        ]
+
+    return [
+        {
+            "code": finding.code,
+            "path": display_path,
+            "field": finding.field,
+            "message": finding.message,
+        }
+        for finding in validate_frontmatter(frontmatter)
+    ]
 
 
 if __name__ == "__main__":
