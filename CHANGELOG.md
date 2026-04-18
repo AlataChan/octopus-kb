@@ -8,6 +8,7 @@
 - fix: quote user/content-derived frontmatter scalars and list items.
 - fix: dedupe graph export alias nodes, emit related entity edges, and roll back failed artifact commits.
 - fix: stage in-place vault migration writes with rollback tracking for modified and created files.
+- fix: report malformed frontmatter as a migration parse failure.
 
 ### Added
 

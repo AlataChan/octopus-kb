@@ -7,7 +7,7 @@ import os
 import shutil
 import tempfile
 
-from octopus_kb_compound.frontmatter import parse_document, render_frontmatter
+from octopus_kb_compound.frontmatter import FrontmatterError, parse_document, render_frontmatter
 from octopus_kb_compound.models import PageMeta
 
 
@@ -42,8 +42,8 @@ def inspect_vault_for_migration(root: str | Path) -> MigrationReport:
         rel = path.relative_to(root_path).as_posix()
         try:
             raw = path.read_text(encoding="utf-8", errors="replace")
-            frontmatter, _ = parse_document(raw)
-        except OSError:
+            frontmatter, _ = parse_document(raw, strict=True)
+        except (OSError, FrontmatterError):
             report.parse_failures.append(rel)
             continue
         if not frontmatter:

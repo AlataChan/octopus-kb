@@ -5,6 +5,10 @@ import textwrap
 from octopus_kb_compound.models import PageMeta
 
 
+class FrontmatterError(ValueError):
+    pass
+
+
 def _quote(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
@@ -79,7 +83,7 @@ def render_frontmatter(meta: PageMeta) -> str:
     return "\n".join(lines)
 
 
-def parse_document(raw: str) -> tuple[dict, str]:
+def parse_document(raw: str, *, strict: bool = False) -> tuple[dict, str]:
     normalized = raw.replace("\r\n", "\n").replace("\r", "\n")
     if not normalized.startswith("---\n"):
         return {}, raw
@@ -94,6 +98,8 @@ def parse_document(raw: str) -> tuple[dict, str]:
         fm_lines.append(line)
 
     if end is None:
+        if strict:
+            raise FrontmatterError("frontmatter opened but never closed")
         return {}, raw
 
     frontmatter = _parse_frontmatter_lines(fm_lines)

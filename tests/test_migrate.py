@@ -110,3 +110,16 @@ def test_normalize_in_place_cleans_up_staging_files_on_rollback(tmp_path, monkey
 
     stray = [p for p in vault.rglob("*.octopus-tmp")]
     assert stray == [], f"no staged .octopus-tmp files should remain, found: {stray}"
+
+
+def test_inspect_vault_reports_malformed_frontmatter_as_parse_failure(tmp_path):
+    vault = tmp_path / "vault"
+    (vault / "wiki").mkdir(parents=True)
+    (vault / "wiki" / "broken.md").write_text(
+        '---\ntitle: "broken"\nrole: concept\n# no closing fence\nbody here\n',
+        encoding="utf-8",
+    )
+    from octopus_kb_compound.migrate import inspect_vault_for_migration
+    report = inspect_vault_for_migration(vault)
+    assert "wiki/broken.md" in report.parse_failures
+    assert "wiki/broken.md" not in report.pages_missing_frontmatter
