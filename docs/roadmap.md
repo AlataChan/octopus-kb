@@ -21,6 +21,25 @@
 - Add export paths for graph-aware retrieval systems and GraphRAG pipelines.
 - Offer templates for team workflows, not just solo vaults.
 
+## 0.5.0 Propose / Validate / Inbox Loop (2026-04-18)
+
+Phase A-min adds the smallest credible agent-assisted KB maintenance loop:
+
+- LLM client: OpenAI-compatible via `httpx`, with no vendor SDK and config-driven profiles in `.octopus-kb/config.toml`.
+- Proposal schema: `schemas/llm/proposal.json` uses per-operation `oneOf` constraints and a strict op enum for `create_page`, `add_alias`, and `append_log`.
+- Declarative YAML validator chain: 7 whitelisted primitives, never executes user Python, and composes with worst-verdict-wins semantics.
+- CLI: `propose` turns raw sources into structured proposals, `validate` runs the rule chain and staged apply, `recover` rolls back pending-audit crashes, and `inbox` handles human exception review with tombstoning.
+- Audit-first two-phase commit: audit entries are written as `pending` before file replacements and flipped to `applied` after success or `rolled_back` after recovery.
+- Provenance override: the CLI computes source SHA locally and never trusts LLM-supplied source metadata.
+- Full product-loop integration coverage lives under `tests/integration/`.
+
+### Deferred to v0.6+
+
+- `update_body` op, because it can rewrite existing knowledge too broadly.
+- `delete_page` and `rename_page` ops, because they are destructive.
+- `kb stale` command for source drift detection, planned for Phase B.
+- `kb rules learn` for rejection-pattern sedimentation.
+
 ## 0.4.0 Decision-Output and Skill Shelf (2026-04-18)
 
 Phase C makes the CLI usable as an agent operating procedure instead of a loose collection of terminal helpers:

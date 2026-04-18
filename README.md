@@ -17,6 +17,20 @@ octopus-kb lint . --json
 
 The full CLI reference remains below.
 
+## Propose Loop (v0.5.0)
+
+octopus-kb now supports LLM-assisted KB maintenance with deterministic gates:
+
+```bash
+octopus-kb propose raw/paper.md --vault . --json
+octopus-kb validate .octopus-kb/proposals/<id>.json --vault . --apply --json
+octopus-kb inbox --vault . --list --json
+```
+
+LLMs only propose changes. A declarative YAML rule chain gates what actually writes to the vault. High-confidence proposals that pass all rules auto-apply. Medium-confidence proposals land in `.octopus-kb/inbox/` for weekly human triage. Hard-rejected proposals, including schema-invalid proposals, path escapes, and canonical conflicts, move to `.octopus-kb/rejections/` as a deterministic audit trail.
+
+Configure the LLM provider in `.octopus-kb/config.toml`. There is no vendor SDK lock-in: any OpenAI-compatible endpoint works, including local Ollama, DeepSeek, Gemini, and Anthropic through compatible APIs.
+
 `octopus-kb-compound` is for teams and individuals who want something stronger than ad-hoc RAG. Instead of re-deriving knowledge from raw documents on every query, the agent maintains a persistent wiki with frontmatter, wikilinks, concept pages, and health checks.
 
 This repository packages four operator-facing assets:
@@ -107,6 +121,10 @@ The skill treats the wiki as a living artifact, not a pile of notes.
 - `lookup <term> --vault <vault> [--json]`: resolve a term to a canonical page, alias, or ambiguity report
 - `retrieve-bundle <query> --vault <vault> [--max-tokens N] [--json]`: return schema-first ordered evidence for an agent task
 - `neighbors <page> --vault <vault> [--json]`: return inbound links, outbound links, aliases, and canonical identity for a page
+- `propose <raw_file> --vault <vault> [--profile name] [--json]`: ask an OpenAI-compatible LLM to propose structured KB changes
+- `validate <proposal.json> --vault <vault> [--apply] [--json]`: run the declarative rule chain and optionally staged-apply a proposal
+- `recover <proposal_id> --vault <vault>`: roll back a proposal apply interrupted after pending audit creation
+- `inbox --vault <vault> --list|--review <id> [--accept|--reject --reason "..."] [--json]`: triage deferred proposals
 - `lint <vault> [--json]`: find broken links, orphan concept pages, and missing metadata
 - `suggest-links <page> --vault <vault>`: propose canonical wikilinks for an existing page
 - `vault-summary <vault>`: report page counts, entry-file presence, and lint finding counts

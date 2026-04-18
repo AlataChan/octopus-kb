@@ -24,6 +24,16 @@ description: Operating procedure for octopus-kb knowledge bases. Use this skill 
    `octopus-kb lint . --json`
    Fix every `DUPLICATE_CANONICAL_PAGE`, `CANONICAL_ALIAS_COLLISION`, `SCHEMA_INVALID_FIELD`, and `SCHEMA_MISSING_FIELD`.
 
+6. To ingest a raw source into the KB:
+   `octopus-kb propose raw/<file> --vault . --json`
+   `octopus-kb validate .octopus-kb/proposals/<id>.json --vault . --apply --json`
+
+7. At least weekly, triage deferred proposals:
+   `octopus-kb inbox --vault . --list --json`
+
+8. If a `validate --apply` run is interrupted, recover before retrying:
+   `octopus-kb recover <proposal_id> --vault .`
+
 ## Forbidden
 
 - Grep on `wiki/**` or `raw/**` without first running `retrieve-bundle`.
