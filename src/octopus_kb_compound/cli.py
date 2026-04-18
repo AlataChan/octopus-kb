@@ -16,6 +16,7 @@ from octopus_kb_compound.lookup import lookup_term
 from octopus_kb_compound.migrate import inspect_vault_for_migration, normalize_vault, render_migration_report
 from octopus_kb_compound.planner import plan_maintenance, render_plan
 from octopus_kb_compound.profile import load_vault_profile
+from octopus_kb_compound.retrieve import build_retrieval_bundle
 from octopus_kb_compound.schema import validate_frontmatter
 from octopus_kb_compound.summary import render_summary, summarize_vault
 from octopus_kb_compound.vault import load_page, scan_markdown_files
@@ -78,6 +79,15 @@ def build_parser() -> argparse.ArgumentParser:
     lookup_parser.add_argument("term")
     lookup_parser.add_argument("--vault", required=True, type=Path)
     lookup_parser.add_argument("--json", action="store_true")
+
+    retrieve_parser = subparsers.add_parser(
+        "retrieve-bundle",
+        help="Build an ordered retrieval evidence bundle for a query.",
+    )
+    retrieve_parser.add_argument("query")
+    retrieve_parser.add_argument("--vault", required=True, type=Path)
+    retrieve_parser.add_argument("--max-tokens", type=int, default=0)
+    retrieve_parser.add_argument("--json", action="store_true")
     return parser
 
 
@@ -254,6 +264,21 @@ def main(argv: list[str] | None = None) -> int:
             _print_lookup_result(result.to_dict())
         return 0
 
+    if args.command == "retrieve-bundle":
+        rc = _validate_vault_dir(args.vault)
+        if rc is not None:
+            return rc
+
+        bundle = build_retrieval_bundle(
+            args.vault, args.query, max_tokens=args.max_tokens
+        )
+        data = bundle.to_dict()
+        if args.json:
+            print(json.dumps(data, ensure_ascii=False))
+        else:
+            _print_retrieval_bundle(data)
+        return 0
+
     parser.error("Unknown command")
     return 2
 
@@ -290,6 +315,22 @@ def _print_lookup_result(result: dict) -> None:
         print(f"alias\t{alias['text']}\t{alias['resolves_to']}")
     for collision in result["collisions"]:
         print(f"collision\t{collision}")
+    for command in result["next"]:
+        print(f"next\t{command}")
+
+
+def _print_retrieval_bundle(result: dict) -> None:
+    bundle = result["bundle"]
+    for path in bundle["schema"]:
+        print(f"schema\t{path}")
+    for path in bundle["index"]:
+        print(f"index\t{path}")
+    for section in ("concepts", "entities", "raw_sources"):
+        for page in bundle[section]:
+            print(f"{section}\t{page['path']}\t{page['reason']}")
+    for warning in result["warnings"]:
+        print(f"warning\t{warning['code']}\t{warning['message']}")
+    print(f"token_estimate\t{result['token_estimate']}")
     for command in result["next"]:
         print(f"next\t{command}")
 

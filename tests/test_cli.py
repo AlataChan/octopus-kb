@@ -25,6 +25,7 @@ def test_cli_parser_includes_existing_baseline_commands():
         "export-graph",
         "validate-frontmatter",
         "lookup",
+        "retrieve-bundle",
     } <= commands
 
 

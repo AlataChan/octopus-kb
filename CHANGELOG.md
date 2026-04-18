@@ -5,6 +5,7 @@
 ### Added
 
 - Add `lookup` CLI command with decision-level JSON output.
+- Add `retrieve-bundle` CLI command with ordered evidence JSON output.
 
 ## [0.3.0] - 2026-04-18
 
