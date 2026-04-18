@@ -26,6 +26,7 @@ def test_cli_parser_includes_existing_baseline_commands():
         "validate-frontmatter",
         "lookup",
         "retrieve-bundle",
+        "neighbors",
     } <= commands
 
 

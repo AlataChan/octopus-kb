@@ -14,6 +14,7 @@ from octopus_kb_compound.links import suggest_links
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.lookup import lookup_term
 from octopus_kb_compound.migrate import inspect_vault_for_migration, normalize_vault, render_migration_report
+from octopus_kb_compound.neighbors import compute_neighbors
 from octopus_kb_compound.planner import plan_maintenance, render_plan
 from octopus_kb_compound.profile import load_vault_profile
 from octopus_kb_compound.retrieve import build_retrieval_bundle
@@ -88,6 +89,11 @@ def build_parser() -> argparse.ArgumentParser:
     retrieve_parser.add_argument("--vault", required=True, type=Path)
     retrieve_parser.add_argument("--max-tokens", type=int, default=0)
     retrieve_parser.add_argument("--json", action="store_true")
+
+    neighbors_parser = subparsers.add_parser("neighbors", help="Report graph neighbors for a page.")
+    neighbors_parser.add_argument("page", type=Path)
+    neighbors_parser.add_argument("--vault", required=True, type=Path)
+    neighbors_parser.add_argument("--json", action="store_true")
     return parser
 
 
@@ -279,6 +285,26 @@ def main(argv: list[str] | None = None) -> int:
             _print_retrieval_bundle(data)
         return 0
 
+    if args.command == "neighbors":
+        rc = _validate_vault_dir(args.vault)
+        if rc is not None:
+            return rc
+        page_rel_path = _resolve_page_in_vault(args.page, args.vault)
+        if page_rel_path is None:
+            return 2
+
+        try:
+            result = compute_neighbors(page_rel_path, args.vault)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        data = result.to_dict()
+        if args.json:
+            print(json.dumps(data, ensure_ascii=False))
+        else:
+            _print_neighbors_result(data)
+        return 0
+
     parser.error("Unknown command")
     return 2
 
@@ -301,6 +327,21 @@ def _validate_page_file(page: Path) -> int | None:
         print(f"Page is not a file: {page}", file=sys.stderr)
         return 2
     return None
+
+
+def _resolve_page_in_vault(page: Path, vault: Path) -> str | None:
+    vault_root = vault.resolve()
+    page_path = page.resolve() if page.is_absolute() else (vault / page).resolve()
+    if not page_path.is_relative_to(vault_root):
+        print(f"Page is outside vault: {page}", file=sys.stderr)
+        return None
+    if not page_path.exists():
+        print(f"Page does not exist: {page}", file=sys.stderr)
+        return None
+    if not page_path.is_file():
+        print(f"Page is not a file: {page}", file=sys.stderr)
+        return None
+    return page_path.relative_to(vault_root).as_posix()
 
 
 def _parse_tags(raw_tags: str) -> list[str]:
@@ -331,6 +372,20 @@ def _print_retrieval_bundle(result: dict) -> None:
     for warning in result["warnings"]:
         print(f"warning\t{warning['code']}\t{warning['message']}")
     print(f"token_estimate\t{result['token_estimate']}")
+    for command in result["next"]:
+        print(f"next\t{command}")
+
+
+def _print_neighbors_result(result: dict) -> None:
+    print(f"page\t{result['page']}")
+    if result["canonical_identity"] is not None:
+        print(f"canonical_identity\t{result['canonical_identity']}")
+    for alias in result["aliases"]:
+        print(f"alias\t{alias}")
+    for inbound in result["inbound"]:
+        print(f"inbound\t{inbound['path']}\t{inbound['via']}\t{inbound['count']}")
+    for outbound in result["outbound"]:
+        print(f"outbound\t{outbound['path']}\t{outbound['via']}")
     for command in result["next"]:
         print(f"next\t{command}")
 

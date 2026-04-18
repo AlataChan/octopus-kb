@@ -1,6 +1,7 @@
 """octopus-kb-compound core package."""
 
 from octopus_kb_compound.lookup import LookupResult, lookup_term
+from octopus_kb_compound.neighbors import NeighborsResult, compute_neighbors
 from octopus_kb_compound.schema import (
     SchemaFinding,
     load_page_meta_schema,
@@ -9,7 +10,9 @@ from octopus_kb_compound.schema import (
 
 __all__ = [
     "LookupResult",
+    "NeighborsResult",
     "SchemaFinding",
+    "compute_neighbors",
     "export",
     "frontmatter",
     "impact",
@@ -20,6 +23,7 @@ __all__ = [
     "lookup_term",
     "migrate",
     "models",
+    "neighbors",
     "page_types",
     "planner",
     "retrieve",
