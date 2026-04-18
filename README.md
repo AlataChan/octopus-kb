@@ -1,177 +1,288 @@
 # octopus-kb-compound
 
-octopus-kb is the agent's operating procedure for Obsidian-style knowledge bases. Instead of letting agents grep your vault, the CLI returns decisions: canonical identity, ordered evidence bundles, graph context, and impact plans.
+> The agent's operating procedure for Obsidian-style knowledge bases.
+
+Instead of letting agents grep your vault, octopus-kb returns **decisions**: canonical identity, ordered evidence bundles, graph context, impact plans, and rule-gated LLM-assisted maintenance.
+
+**Version:** 0.6.0 · **Tests:** 200 · **Python:** 3.11+ · **License:** see repo
+
+---
+
+## What It Does
+
+1. **Deterministic core** — canonical pages, alias resolution, wikilink graph, frontmatter schema, atomic migration.
+2. **Agent-facing decision CLI** — every command returns schema-validated JSON so agents don't fall back to grep.
+3. **Rule-gated LLM propose loop** — LLMs *propose* changes, declarative YAML rules gate what auto-applies, the inbox handles exceptions.
+4. **Deterministic eval harness** — pure-Python grep vs octopus-kb baseline, bit-identical across platforms.
+
+No LLM vendor lock-in. Any OpenAI-compatible endpoint works (local Ollama, DeepSeek, Gemini, Anthropic via compat, etc.).
+
+---
+
+## Install
 
 ```bash
-octopus-kb retrieve-bundle 'rag ops' --vault . --json
-octopus-kb lookup 'RAG Ops' --vault . --json
-octopus-kb neighbors 'wiki/concepts/RAG Operations.md' --vault . --json
-octopus-kb impacted-pages 'wiki/concepts/RAG Operations.md' --vault . --json
-octopus-kb lint . --json
-```
-
-## Install as a Skill
-
-- Claude Code: copy or reference `skills/kb/SKILL.md`, then install the optional grep guard from `examples/hooks/` using `docs/hooks/claude-code-pretooluse.md`.
-- Codex: add `skills/kb/SKILL.md` to your Codex skills directory and use the recipes in `skills/kb/recipes/`.
-
-The full CLI reference remains below.
-
-## Propose Loop (v0.5.0)
-
-octopus-kb now supports LLM-assisted KB maintenance with deterministic gates:
-
-```bash
-octopus-kb propose raw/paper.md --vault . --json
-octopus-kb validate .octopus-kb/proposals/<id>.json --vault . --apply --json
-octopus-kb inbox --vault . --list --json
-```
-
-LLMs only propose changes. A declarative YAML rule chain gates what actually writes to the vault. High-confidence proposals that pass all rules auto-apply. Medium-confidence proposals land in `.octopus-kb/inbox/` for weekly human triage. Hard-rejected proposals, including schema-invalid proposals, path escapes, and canonical conflicts, move to `.octopus-kb/rejections/` as a deterministic audit trail.
-
-Configure the LLM provider in `.octopus-kb/config.toml`. There is no vendor SDK lock-in: any OpenAI-compatible endpoint works, including local Ollama, DeepSeek, Gemini, and Anthropic through compatible APIs.
-
-## Benchmark (v1)
-
-The v1 deterministic benchmark compares pure-Python grep against the `octopus-kb` decision path on a committed reference corpus. See `docs/benchmarks/v1.md` for results, reproduction commands, and the baseline artifacts under `eval/runs/2026-04-18-baseline/`.
-
-`octopus-kb-compound` is for teams and individuals who want something stronger than ad-hoc RAG. Instead of re-deriving knowledge from raw documents on every query, the agent maintains a persistent wiki with frontmatter, wikilinks, concept pages, and health checks.
-
-This repository packages four operator-facing assets:
-
-- `kb-ingest`: an acquisition skill for fetching public URLs into `raw/*.md`
-- `kb-retrieve`: a retrieval skill for evidence-backed question answering
-- `kb-maintain`: a maintenance skill for ingest, updates, links, and lint
-- `obsidian-graph`: a prompt pack and policy set for stable wikilinks and graph hygiene
-
-The Python package provides deterministic helpers for frontmatter, wikilinks, linting, and vault inspection.
-
-## Design Principles
-
-- Treat the wiki as a persistent synthesis layer, not as disposable RAG context.
-- Keep raw sources as evidence, not as the primary interface for every query.
-- Use frontmatter for structure, tags for topic semantics, and wikilinks for graph navigation.
-- Keep aliases explicit in frontmatter so retrieval and lint stay deterministic.
-- Make maintenance observable with lint findings instead of hidden drift.
-
-## Core Model
-
-The repository assumes a three-layer vault:
-
-- `raw sources`: immutable evidence and source documents
-- `wiki`: generated concept, entity, comparison, and overview pages
-- `schema`: rules that tell the LLM how to retrieve, maintain, and evolve the wiki
-
-## Repository Layout
-
-```text
-octopus-kb-compound/
-├── skills/
-│   ├── kb-ingest/
-│   ├── kb-retrieve/
-│   └── kb-maintain/
-├── prompts/
-│   └── obsidian-graph/
-├── scripts/
-├── src/octopus_kb_compound/
-├── examples/minimal-vault/
-├── docs/
-└── tests/
-```
-
-## Quickstart
-
-```bash
+git clone <this-repo>
 cd octopus-kb-compound
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
-python3 -m pytest -q
-python3 -m octopus_kb_compound.cli --help
-python3 -m octopus_kb_compound.cli lint examples/minimal-vault
+pip install -e '.[dev]'
+pytest -q                                          # 200 passed
+octopus-kb --help
 ```
 
-For a zero-install smoke check, you can also run:
+No-install smoke check:
 
 ```bash
 PYTHONPATH=src python3 -m octopus_kb_compound.cli --help
 ```
 
-## What The Skills Do
+---
 
-### `kb-retrieve`
+## Quickstart (5-command Agent Loop)
 
-Use when the LLM should answer from the knowledge base by following:
+```bash
+# 1. Before grepping the vault, ask for an ordered evidence bundle
+octopus-kb retrieve-bundle "how does RAG ops handle stale indexes" --vault . --json
 
-`schema -> index -> concept -> raw source`
+# 2. Before creating a page or alias, resolve the canonical identity
+octopus-kb lookup "RAG Ops" --vault . --json
 
-The skill keeps answers evidence-backed and gap-aware.
+# 3. Understand a page's graph neighborhood before editing it
+octopus-kb neighbors wiki/concepts/RAG\ Operations.md --vault . --json
 
-### `kb-ingest`
+# 4. Before editing, find all pages that would be affected
+octopus-kb impacted-pages wiki/concepts/RAG\ Operations.md --vault . --json
 
-Use when a public URL needs to become a new raw source page in the vault.
+# 5. Lint before finishing
+octopus-kb lint . --json
+```
 
-The skill stops at `raw/*.md`. It does not update concept pages, indexes, or logs.
+---
 
-### `kb-maintain`
+## Command Reference
 
-Use when ingesting sources, updating concept pages, refreshing frontmatter, adding links, or linting the graph.
+All agent-facing commands accept `--json` for structured output validated against schemas under `schemas/cli/`.
+Exit codes: `0` success · `1` runtime error (or findings for `lint`) · `2` invalid user input.
 
-The skill treats the wiki as a living artifact, not a pile of notes.
+### Agent Decision Verbs
 
-## What The CLI Does
+Commands designed to be the first call an agent makes, before `grep`/`read`.
 
-- `ingest-url <url> --vault <path> [--tags tag1,tag2] [--lang zh]`: fetch a public URL through Jina Reader and write a new `raw/*.md` page
-- `lookup <term> --vault <vault> [--json]`: resolve a term to a canonical page, alias, or ambiguity report
-- `retrieve-bundle <query> --vault <vault> [--max-tokens N] [--json]`: return schema-first ordered evidence for an agent task
-- `neighbors <page> --vault <vault> [--json]`: return inbound links, outbound links, aliases, and canonical identity for a page
-- `propose <raw_file> --vault <vault> [--profile name] [--json]`: ask an OpenAI-compatible LLM to propose structured KB changes
-- `validate <proposal.json> --vault <vault> [--apply] [--json]`: run the declarative rule chain and optionally staged-apply a proposal
-- `recover <proposal_id> --vault <vault>`: roll back a proposal apply interrupted after pending audit creation
-- `inbox --vault <vault> --list|--review <id> [--accept|--reject --reason "..."] [--json]`: triage deferred proposals
-- `lint <vault> [--json]`: find broken links, orphan concept pages, and missing metadata
-- `suggest-links <page> --vault <vault>`: propose canonical wikilinks for an existing page
-- `vault-summary <vault>`: report page counts, entry-file presence, and lint finding counts
-- `impacted-pages <page> --vault <vault> [--json]`: list pages likely affected by a page change
-- `plan-maintenance <page> --vault <vault>`: emit non-mutating follow-up actions for wiki maintenance
-- `inspect-vault <vault>` / `normalize-vault <vault>`: inspect and stage conservative migration fixes
-- `export-graph <vault> --out <dir>`: write `nodes.json`, `edges.json`, `manifest.json`, and `aliases.json`
-- `validate-frontmatter <path> [--json]`: strictly parse frontmatter and report PageMeta schema findings
+| Command | Purpose |
+|---|---|
+| `octopus-kb lookup <term> --vault <v> [--json]` | Resolve a term to canonical page + aliases; report ambiguity |
+| `octopus-kb retrieve-bundle <query> --vault <v> [--max-tokens N] [--json]` | Ordered evidence: `schema → index → concepts → entities → raw_sources`. Trim drops `raw_sources` first, then `entities` |
+| `octopus-kb neighbors <page> --vault <v> [--json]` | Inbound/outbound wikilinks + `related_entities`, aliases, canonical identity |
+| `octopus-kb impacted-pages <page> --vault <v> [--json]` | Pages likely affected by a change (including INDEX/LOG) |
 
-`ingest-url` uses `https://r.jina.ai/` as a third-party conversion service. Only public `http/https` URLs are allowed, and the command rejects localhost and private-network targets.
+### Propose Loop (LLM-assisted maintenance)
 
-## Validation
+```
+raw source ──propose──▶ .proposals/<id>.json
+                │
+                ▼
+     declarative YAML rule chain
+     ├─ reject → .rejections/    (hard fail, with rule_id)
+     ├─ defer  → .inbox/         (human triage)
+     └─ pass   → staged apply → vault + .audit/
+```
 
-`schemas/page-meta.json` is a JSON Schema document that defines the valid PageMeta shape for vault frontmatter. Run `octopus-kb validate-frontmatter examples/minimal-vault` to check a vault directly; the same schema findings also appear in `octopus-kb lint` output alongside link and graph-health findings.
+| Command | Purpose |
+|---|---|
+| `octopus-kb propose <raw.md> --vault <v> [--profile name] [--json]` | LLM proposes structured diff; provenance (SHA + prompt version) computed locally, never trusted from model |
+| `octopus-kb validate <proposal.json> --vault <v> [--apply] [--json]` | Run rule chain; with `--apply`, stage + atomic-commit + audit entry |
+| `octopus-kb recover <proposal_id> --vault <v>` | Roll back an apply interrupted mid-commit (uses pending-audit marker) |
+| `octopus-kb inbox --vault <v> --list [--json]` | List deferred proposals |
+| `octopus-kb inbox --vault <v> --review <id> [--accept \| --reject --reason "…"] [--json]` | Human triage: accept re-runs chain with override; hard rejects still block |
 
-## Make Claude Actually Use This
+Supported ops in v1: `create_page`, `add_alias`, `append_log`. Risky ops (`update_body`, `delete_page`, `rename_page`) deferred to v0.7+.
 
-Install the optional Claude Code PreToolUse hook in `docs/hooks/claude-code-pretooluse.md` to remind agents to run `octopus-kb retrieve-bundle ... --json` before grepping `wiki/` or `raw/`. The hook uses the marker file touched by successful `retrieve-bundle` runs and is advisory only.
+### Maintenance
 
-## Example Vault
+| Command | Purpose |
+|---|---|
+| `octopus-kb lint <vault> [--json]` | Schema findings + broken links + alias collisions + orphans |
+| `octopus-kb validate-frontmatter <path> [--json]` | Strict parse + PageMeta JSON Schema findings (file or directory) |
+| `octopus-kb vault-summary <vault>` | Page counts by role/layer, entry-file presence, lint summary |
+| `octopus-kb plan-maintenance <page> --vault <v>` | Non-mutating follow-up actions after a page change |
+| `octopus-kb suggest-links <page> --vault <v>` | Propose canonical wikilinks for an existing page |
 
-`examples/minimal-vault/` shows the intended shape of a vault. `examples/expanded-vault/` adds concept, entity, comparison, timeline, log, and raw-source pages for end-to-end operator workflows.
+### Ingestion
 
-- `AGENTS.md` as schema
-- `wiki/INDEX.md` as the navigation hub
-- `wiki/LOG.md` as the maintenance trail
-- `wiki/concepts/*.md` as synthesized knowledge pages
-- `wiki/entities/*.md` as canonical graph nodes
-- `raw/*.md` as evidence
+| Command | Purpose |
+|---|---|
+| `octopus-kb ingest-url <url> --vault <v> [--tags t1,t2] [--lang zh]` | Fetch a public URL via Jina Reader → `raw/*.md`. Rejects localhost and private IPs |
+| `octopus-kb ingest-file <path> --vault <v> [--tags t1,t2] [--lang zh]` | Convert a local file via `markitdown` → `raw/*.md` |
 
-## Open Source Docs
+### Migration / Export
 
-- `CONTRIBUTING.md`: contribution workflow and standards
-- `docs/roadmap.md`: next milestones for the framework
-- `docs/architecture.md`: operating model and layer boundaries
-- `docs/production-vault.md`: how to adopt the framework in an existing vault
-- `docs/releases/v0.1.0.md`: first release notes
-- `CHANGELOG.md`: release history
+| Command | Purpose |
+|---|---|
+| `octopus-kb inspect-vault <vault>` | Read-only migration preview: malformed frontmatter, missing entry files |
+| `octopus-kb normalize-vault <vault> [--apply] [--in-place]` | Staged-by-default migration. `--in-place` requires `--apply` and uses backup+rollback |
+| `octopus-kb export-graph <vault> --out <dir>` | Atomic export: `nodes.json` + `edges.json` + `manifest.json` + `aliases.json` |
 
-## Production Vaults
+### Eval Harness
 
-For real Obsidian vaults, create a root `AGENTS.md`, a root `.octopus-kb.yml`, and a `wiki/LOG.md`. The repository includes `scripts/bootstrap_vault.py` to bootstrap those files.
+Deterministic benchmark: pure-Python grep vs `octopus-kb` path, no subprocess, bit-identical across platforms.
+
+| Command | Purpose |
+|---|---|
+| `octopus-kb eval run --tasks <tasks.yaml> --out <dir> [--json]` | Execute a task suite; writes per-task deterministic JSON + `summary.md`; ephemeral `*.metrics.json` (gitignored) carry latency |
+| `octopus-kb eval report --run <dir> [--format markdown]` | Re-render `summary.md` from prior run artifacts |
+
+See `docs/benchmarks/v1.md` for the committed v1 baseline under `eval/runs/2026-04-18-baseline/`.
+
+---
+
+## Configuration
+
+LLM provider is config-driven. `.octopus-kb/config.toml` in the vault root:
+
+```toml
+version = 1
+
+[llm]
+default_profile = "local-large"
+
+[llm.profiles.local-small]
+base_url = "http://localhost:11434/v1"
+model = "qwen2.5:7b-instruct"
+# api_key_env = ""    # empty / omitted → no auth
+
+[llm.profiles.local-large]
+base_url = "http://localhost:11434/v1"
+model = "qwen2.5:32b-instruct"
+timeout = 180
+
+[llm.profiles.cloud-cheap]
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-chat"
+api_key_env = "DEEPSEEK_API_KEY"
+
+[llm.profiles.cloud-strong]
+base_url = "https://api.anthropic.com/v1"
+model = "claude-haiku-4-5"
+api_key_env = "ANTHROPIC_API_KEY"
+```
+
+Override per-call: `octopus-kb propose raw/foo.md --vault . --profile cloud-cheap`.
+
+Prompts are files — edit `prompts/propose.md` to change the proposer's instructions.
+
+---
+
+## Validator Rules (declarative, YAML only)
+
+Rules in `src/octopus_kb_compound/validators/builtins.yaml` + optional user rules in `.octopus-kb/rules.yaml`. **Never** executable Python. v1 primitives:
+
+| Primitive | Fires when |
+|---|---|
+| `op_count.gt: N` | Total ops > N |
+| `any_op_confidence_below: X` | Any op confidence < X |
+| `vault_has_canonical_key_for_new_page: true` | `create_page` duplicates an existing canonical identity |
+| `proposal_schema_invalid: true` | Proposal fails JSON Schema (runs first, before `applies_to` filter) |
+| `new_frontmatter_schema_invalid: true` | `create_page` frontmatter fails PageMeta schema |
+| `op_target_outside_vault: true` | Target is absolute, contains `..`, or starts with `.` |
+| `op_target_in_forbidden_area: true` | Target under `.octopus-kb/`, `.git/`, `.venv/` |
+
+Worst verdict wins: `reject > defer > downgrade > pass`. Rules tagged `human_overridable: true` can be demoted via `inbox --accept`; hard rejects cannot.
+
+See `docs/validators.md`.
+
+---
+
+## Agent Skill Integration
+
+### Claude Code
+
+1. Copy or reference `skills/kb/SKILL.md` (opinionated SOP, not a menu).
+2. Optional: install the PreToolUse grep guard — see `docs/hooks/claude-code-pretooluse.md`. It reminds agents to run `retrieve-bundle` before grepping `wiki/` or `raw/` by checking a marker file that `retrieve-bundle` touches.
+3. Sample `settings.json` under `examples/.claude/`.
+
+### Codex / others
+
+Point your skill directory at `skills/kb/SKILL.md` and use recipes in `skills/kb/recipes/`.
+
+The skill tells agents:
+
+- Before `Grep`/`Read` on `wiki/` or `raw/` → run `retrieve-bundle`.
+- Before creating a page/alias → run `lookup`.
+- Before editing a page → run `impacted-pages`.
+- To ingest a raw source → `propose` then `validate --apply`.
+- Weekly → `inbox --list` to triage.
+
+---
+
+## Vault Layout
+
+```
+my-vault/
+├── AGENTS.md              # schema anchor (operator SOP)
+├── wiki/
+│   ├── INDEX.md           # navigation hub
+│   ├── LOG.md             # maintenance trail
+│   ├── concepts/          # synthesized knowledge pages
+│   ├── entities/          # canonical graph nodes
+│   ├── comparisons/       # A-vs-B pages
+│   └── timelines/         # chronological pages
+├── raw/                   # immutable evidence (raw sources)
+├── .octopus-kb/
+│   ├── config.toml        # LLM provider profiles
+│   ├── rules.yaml         # (optional) user validator rules
+│   ├── proposals/         # LLM-proposed diffs
+│   ├── audit/             # stateful per-proposal record (pending→applied|rolled_back)
+│   ├── inbox/             # deferred proposals
+│   ├── rejections/        # hard-rejected proposals with rule_id
+│   └── staging/           # in-flight apply workspace
+```
+
+`examples/minimal-vault/` and `examples/expanded-vault/` ship as reference shapes.
+
+---
+
+## Design Principles
+
+- **Curation over extraction.** The wiki is a persistent synthesis layer, not disposable RAG context.
+- **Decisions over data.** CLI returns canonical identity, ordered bundles, next-command hints — not grep-style match lines.
+- **Deterministic gates, LLM proposals.** LLMs propose; declarative rules decide; humans see exceptions.
+- **Never trust LLM provenance.** `source.sha256` and `prompt_version` computed locally, always.
+- **Audit-first commit.** Pending audit written *before* file replacements. Crash recovery reads the pending audit as authoritative.
+- **No vendor lock-in.** OpenAI-compat HTTP only. Swap providers by editing `config.toml`.
+
+---
+
+## Release History
+
+| Version | Focus | Tests |
+|---|---|---|
+| 0.6.0 | Deterministic eval harness | 200 |
+| 0.5.0 | Propose / validate / inbox / recover loop | 180 |
+| 0.4.0 | Skill shelf + decision-level JSON outputs + PreToolUse hook | 129 |
+| 0.3.0 | PageMeta JSON Schema + validate-frontmatter | 104 |
+| 0.2.1 | Remediation batch (atomicity, rollback, alias dedup) | 85 |
+| 0.2.0 | Operator CLI expansion + metadata & lint model | 70 |
+| 0.1.0 | Initial scaffold | — |
+
+See `CHANGELOG.md` and `docs/roadmap.md` for details.
+
+---
+
+## Docs
+
+- `docs/roadmap.md` — release-by-release roadmap
+- `docs/architecture.md` — operating model and layer boundaries
+- `docs/validators.md` — rule chain primitives reference
+- `docs/benchmarks/v1.md` — v1 deterministic benchmark
+- `docs/hooks/claude-code-pretooluse.md` — grep-guard hook install
+- `docs/production-vault.md` — adopt the framework in an existing vault
+- `CONTRIBUTING.md` — contribution workflow
+
+---
 
 ## Status
 
-Initial open-source scaffold is complete and tested.
+0.6.0 delivered: deterministic core + agent decision CLI + rule-gated LLM propose loop + eval baseline.
+
+Contributions welcome. Issues and PRs on the upstream repo.
