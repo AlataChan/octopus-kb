@@ -5,6 +5,12 @@ import json
 from pathlib import Path
 import sys
 
+from octopus_kb_compound.apply import (
+    ValidateInputError,
+    ValidateRuntimeError,
+    recover_proposal,
+    validate_proposal_file,
+)
 from octopus_kb_compound import ingest
 from octopus_kb_compound.export import export_graph_artifacts
 from octopus_kb_compound.frontmatter import FrontmatterError, parse_document
@@ -108,6 +114,16 @@ def build_parser() -> argparse.ArgumentParser:
     propose_parser.add_argument("--vault", required=True, type=Path)
     propose_parser.add_argument("--profile")
     propose_parser.add_argument("--json", action="store_true")
+
+    validate_parser = subparsers.add_parser("validate", help="Validate and optionally apply a proposal.")
+    validate_parser.add_argument("proposal", type=Path)
+    validate_parser.add_argument("--vault", required=True, type=Path)
+    validate_parser.add_argument("--apply", action="store_true")
+    validate_parser.add_argument("--json", action="store_true")
+
+    recover_parser = subparsers.add_parser("recover", help="Recover a proposal apply interrupted mid-commit.")
+    recover_parser.add_argument("proposal_id")
+    recover_parser.add_argument("--vault", required=True, type=Path)
     return parser
 
 
@@ -364,6 +380,38 @@ def main(argv: list[str] | None = None) -> int:
             print(f"operations: {result['operations']}")
         return 0
 
+    if args.command == "validate":
+        try:
+            result = validate_proposal_file(
+                args.proposal,
+                args.vault,
+                apply=args.apply,
+            ).to_dict()
+        except ValidateInputError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        except ValidateRuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            _print_apply_result(result)
+        return 0
+
+    if args.command == "recover":
+        try:
+            result = recover_proposal(args.proposal_id, args.vault).to_dict()
+        except ValidateInputError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        except ValidateRuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        _print_apply_result(result)
+        return 0
+
     parser.error("Unknown command")
     return 2
 
@@ -464,6 +512,18 @@ def _print_neighbors_result(result: dict) -> None:
         print(f"outbound\t{outbound['path']}\t{outbound['via']}")
     for command in result["next"]:
         print(f"next\t{command}")
+
+
+def _print_apply_result(result: dict) -> None:
+    print(f"status\t{result['status']}")
+    if "verdict" in result:
+        print(f"verdict\t{result['verdict']}")
+    if "audit_path" in result:
+        print(f"audit\t{result['audit_path']}")
+    if "message" in result:
+        print(f"message\t{result['message']}")
+    for rule in result.get("rule_results", []):
+        print(f"rule\t{rule['rule_id']}\t{rule['verdict']}\t{rule['reason']}")
 
 
 def _collect_frontmatter_findings(path: Path) -> list[dict[str, str]]:

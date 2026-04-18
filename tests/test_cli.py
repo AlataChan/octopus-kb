@@ -28,6 +28,8 @@ def test_cli_parser_includes_existing_baseline_commands():
         "retrieve-bundle",
         "neighbors",
         "propose",
+        "validate",
+        "recover",
     } <= commands
 
 
