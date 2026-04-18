@@ -53,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     impact_parser = subparsers.add_parser("impacted-pages", help="Report pages likely impacted by a page change.")
     impact_parser.add_argument("page", type=Path)
     impact_parser.add_argument("--vault", required=True, type=Path)
+    impact_parser.add_argument("--json", action="store_true")
 
     plan_parser = subparsers.add_parser("plan-maintenance", help="Plan deterministic wiki maintenance for a changed page.")
     plan_parser.add_argument("page", type=Path)
@@ -195,8 +196,25 @@ def main(argv: list[str] | None = None) -> int:
         if rc is not None:
             return rc
 
-        for path in find_impacted_pages(args.page, args.vault):
-            print(path)
+        impacted = find_impacted_pages(args.page, args.vault)
+        if args.json:
+            page = _relative_path_for_output(args.page, args.vault)
+            print(
+                json.dumps(
+                    {
+                        "page": page,
+                        "impacted": impacted,
+                        "next": [
+                            f'octopus-kb lookup "{page}" --vault "{args.vault}" --json',
+                            f'octopus-kb neighbors "{page}" --vault "{args.vault}" --json',
+                        ],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+        else:
+            for path in impacted:
+                print(path)
         return 0
 
     if args.command == "plan-maintenance":
@@ -339,6 +357,15 @@ def _lint_finding_to_dict(finding) -> dict[str, str]:
         "path": finding.path,
         "message": finding.message,
     }
+
+
+def _relative_path_for_output(path: Path, root: Path) -> str:
+    resolved_root = root.resolve()
+    resolved_path = path.resolve() if path.is_absolute() else (root / path).resolve()
+    try:
+        return resolved_path.relative_to(resolved_root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _resolve_page_in_vault(page: Path, vault: Path) -> str | None:

@@ -158,6 +158,45 @@ def test_cli_impacted_pages_reports_related_pages(tmp_path: Path, capsys):
     assert "wiki/entities/Vector Store.md" in captured.out
 
 
+def test_cli_impacted_pages_json_output(tmp_path):
+    import io
+    import json
+    import sys
+
+    import jsonschema
+
+    vault = tmp_path / "vault"
+    (vault / "wiki" / "concepts").mkdir(parents=True)
+    (vault / "AGENTS.md").write_text("# Schema\n", encoding="utf-8")
+    (vault / "wiki" / "INDEX.md").write_text("# Index\n", encoding="utf-8")
+    (vault / "wiki" / "LOG.md").write_text("# Log\n", encoding="utf-8")
+    target = vault / "wiki" / "concepts" / "Topic.md"
+    target.write_text(
+        '---\ntitle: "Topic"\ntype: concept\nlang: en\nrole: concept\n'
+        'layer: wiki\nsource_of_truth: canonical\ntags: []\nsummary: "s"\n---\n',
+        encoding="utf-8",
+    )
+
+    from octopus_kb_compound.cli import main
+
+    buf = io.StringIO()
+    original = sys.stdout
+    sys.stdout = buf
+    try:
+        rc = main(["impacted-pages", str(target), "--vault", str(vault), "--json"])
+    finally:
+        sys.stdout = original
+
+    assert rc == 0
+    data = json.loads(buf.getvalue())
+    assert data["page"] == "wiki/concepts/Topic.md"
+    assert isinstance(data["impacted"], list)
+    assert "impacted" in data and "next" in data
+
+    schema_path = Path(__file__).resolve().parent.parent / "schemas" / "cli" / "impacted-pages.json"
+    jsonschema.validate(data, json.loads(schema_path.read_text(encoding="utf-8")))
+
+
 def test_cli_plan_maintenance_reports_actions(tmp_path: Path, capsys):
     raw = tmp_path / "raw" / "source.md"
     index = tmp_path / "wiki" / "INDEX.md"
