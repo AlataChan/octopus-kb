@@ -9,6 +9,7 @@
 - Add `neighbors` CLI command with graph context JSON output.
 - Add `--json` output for `lint` for agent consumers.
 - Add `--json` output and schema for `impacted-pages`.
+- Add `kb` skill with SOP and slash recipes.
 
 ## [0.3.0] - 2026-04-18
 
