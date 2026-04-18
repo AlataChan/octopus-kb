@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.6.0] - 2026-04-18
+
 ### Added
 
 - Add committed reference corpus for the eval harness.
@@ -9,6 +11,7 @@
 - Add grep and octopus-kb eval path runners.
 - Add deterministic eval scoring and suite runner.
 - Add `eval run` and `eval report` CLI commands.
+- Add v1 deterministic benchmark artifacts and report.
 
 ## [0.5.0] - 2026-04-18
 

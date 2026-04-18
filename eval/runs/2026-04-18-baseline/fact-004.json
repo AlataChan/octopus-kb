@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "answer": "raw/late-chunking-source.md:2:title: \"Late Chunking Source\"\nraw/late-chunking-source.md:9:# Late Chunking Source\nraw/late-chunking-source.md:11:Late chunking source notes connect [[Late Chunking]] to [[Embedding Model]] behavior and [[Retrieval Precision]].\nwiki/INDEX.md:13:- [[Late Chunking]]\nwiki/LOG.md:13:- 2026-04-02: Added [[Late Chunking]] and [[Retrieval Precision]] references.\nwiki/comparisons/Chunking Strategy Comparison.md:13:[[Late Chunking]] delays segmentation to preserve context. Conventional chunking can be simpler but may lower [[Retrieval Precision]].\nwiki/concepts/Late Chunking.md:2:title: \"Late Chunking\"\nwiki/concepts/Late Chunking.md:13:# Late Chunking\nwiki/entities/Embedding Model.md:13:The embedding model affects [[Late Chunking]] quality and downstream [[Retrieval Precision]].\nwiki/timelines/RAG Knowledge Base Timeline.md:14:- 2026-04-02: [[Late Chunking]] and [[Evaluation Harness]] references added.",
+      "answer_json": null,
+      "deterministic_score": 1.0,
+      "input_size_chars": 936,
+      "path_name": "grep",
+      "rationale": "expected wiki/concepts/Late Chunking.md, got wiki/concepts/Late Chunking.md",
+      "sources": [
+        "raw/late-chunking-source.md",
+        "wiki/INDEX.md",
+        "wiki/LOG.md",
+        "wiki/comparisons/Chunking Strategy Comparison.md",
+        "wiki/concepts/Late Chunking.md",
+        "wiki/entities/Embedding Model.md",
+        "wiki/timelines/RAG Knowledge Base Timeline.md"
+      ]
+    },
+    {
+      "answer": "wiki/concepts/Late Chunking.md",
+      "answer_json": {
+        "aliases": [
+          {
+            "resolves_to": "wiki/concepts/Late Chunking.md",
+            "text": "Late Chunking"
+          }
+        ],
+        "ambiguous": false,
+        "canonical": {
+          "path": "wiki/concepts/Late Chunking.md",
+          "source_of_truth": "canonical",
+          "title": "Late Chunking"
+        },
+        "collisions": [],
+        "next": [
+          "octopus-kb retrieve-bundle \"wiki/concepts/Late Chunking.md\" --vault \"eval/corpora/small-vault\" --json",
+          "octopus-kb neighbors \"wiki/concepts/Late Chunking.md\" --vault \"eval/corpora/small-vault\" --json"
+        ],
+        "term": "Late Chunking"
+      },
+      "deterministic_score": 1.0,
+      "input_size_chars": 30,
+      "path_name": "octopus-kb",
+      "rationale": "expected wiki/concepts/Late Chunking.md, got wiki/concepts/Late Chunking.md",
+      "sources": [
+        "wiki/concepts/Late Chunking.md"
+      ]
+    }
+  ],
+  "task_id": "fact-004",
+  "task_type": "fact_lookup"
+}

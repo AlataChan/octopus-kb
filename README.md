@@ -31,6 +31,10 @@ LLMs only propose changes. A declarative YAML rule chain gates what actually wri
 
 Configure the LLM provider in `.octopus-kb/config.toml`. There is no vendor SDK lock-in: any OpenAI-compatible endpoint works, including local Ollama, DeepSeek, Gemini, and Anthropic through compatible APIs.
 
+## Benchmark (v1)
+
+The v1 deterministic benchmark compares pure-Python grep against the `octopus-kb` decision path on a committed reference corpus. See `docs/benchmarks/v1.md` for results, reproduction commands, and the baseline artifacts under `eval/runs/2026-04-18-baseline/`.
+
 `octopus-kb-compound` is for teams and individuals who want something stronger than ad-hoc RAG. Instead of re-deriving knowledge from raw documents on every query, the agent maintains a persistent wiki with frontmatter, wikilinks, concept pages, and health checks.
 
 This repository packages four operator-facing assets:

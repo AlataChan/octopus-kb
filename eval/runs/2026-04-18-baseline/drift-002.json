@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "answer": "",
+      "answer_json": {
+        "stale_paths": []
+      },
+      "deterministic_score": 0.0,
+      "input_size_chars": 0,
+      "path_name": "grep",
+      "rationale": "precision=0.000 recall=0.000",
+      "sources": []
+    },
+    {
+      "answer": "wiki/concepts/RAG Operations.md",
+      "answer_json": {
+        "stale_paths": [
+          "wiki/concepts/RAG Operations.md"
+        ]
+      },
+      "deterministic_score": 1.0,
+      "input_size_chars": 31,
+      "path_name": "octopus-kb",
+      "rationale": "precision=1.000 recall=1.000",
+      "sources": [
+        "wiki/concepts/RAG Operations.md"
+      ]
+    }
+  ],
+  "task_id": "drift-002",
+  "task_type": "drift_detection"
+}

@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "answer": "raw/rag-ops-source.md:11:Initial notes describe [[RAG Operations]] with [[Vector Store]] and [[Knowledge Graph]] responsibilities.\nwiki/INDEX.md:16:- [[Vector Store]]\nwiki/INDEX.md:19:- [[Vector Store vs Knowledge Graph]]\nwiki/comparisons/Vector Store vs Knowledge Graph.md:2:title: \"Vector Store vs Knowledge Graph\"\nwiki/comparisons/Vector Store vs Knowledge Graph.md:11:# Vector Store vs Knowledge Graph\nwiki/comparisons/Vector Store vs Knowledge Graph.md:13:[[Vector Store]] retrieval emphasizes similarity search. [[Knowledge Graph]] retrieval emphasizes explicit relationships. [[RAG Operations]] can use both.\nwiki/concepts/RAG Operations.md:12:  - \"Vector Store\"\nwiki/concepts/RAG Operations.md:18:RAG operations coordinate [[Vector Store]], [[Knowledge Graph]], and [[Retrieval Precision]] maintenance. Eval loops use [[Evaluation Harness]] to keep changes measurable.\nwiki/concepts/Retrieval Precision.md:10:  - \"Vector Store\"\nwiki/concepts/Retrieval Precision.md:16:Retrieval precision depends on [[Vector Store]] indexing choices, [[Embedding Model]] quality, and operating discipline from [[RAG Operations]].\nwiki/entities/Knowledge Graph.md:13:A knowledge graph complements [[Vector Store]] lookup and gives [[RAG Operations]] explicit relationship context.\nwiki/entities/Vector Store.md:2:title: \"Vector Store\"\nwiki/entities/Vector Store.md:11:# Vector Store\nwiki/entities/Vector Store.md:13:A vector store supports [[RAG Operations]] and competes with graph-centric retrieval in [[Vector Store vs Knowledge Graph]].",
+      "answer_json": null,
+      "deterministic_score": 1.0,
+      "input_size_chars": 1530,
+      "path_name": "grep",
+      "rationale": "expected wiki/entities/Vector Store.md, got wiki/entities/Vector Store.md",
+      "sources": [
+        "raw/rag-ops-source.md",
+        "wiki/INDEX.md",
+        "wiki/comparisons/Vector Store vs Knowledge Graph.md",
+        "wiki/concepts/RAG Operations.md",
+        "wiki/concepts/Retrieval Precision.md",
+        "wiki/entities/Knowledge Graph.md",
+        "wiki/entities/Vector Store.md"
+      ]
+    },
+    {
+      "answer": "wiki/entities/Vector Store.md",
+      "answer_json": {
+        "aliases": [
+          {
+            "resolves_to": "wiki/entities/Vector Store.md",
+            "text": "Vector Store"
+          }
+        ],
+        "ambiguous": false,
+        "canonical": {
+          "path": "wiki/entities/Vector Store.md",
+          "source_of_truth": "canonical",
+          "title": "Vector Store"
+        },
+        "collisions": [],
+        "next": [
+          "octopus-kb retrieve-bundle \"wiki/entities/Vector Store.md\" --vault \"eval/corpora/small-vault\" --json",
+          "octopus-kb neighbors \"wiki/entities/Vector Store.md\" --vault \"eval/corpora/small-vault\" --json"
+        ],
+        "term": "Vector Store"
+      },
+      "deterministic_score": 1.0,
+      "input_size_chars": 29,
+      "path_name": "octopus-kb",
+      "rationale": "expected wiki/entities/Vector Store.md, got wiki/entities/Vector Store.md",
+      "sources": [
+        "wiki/entities/Vector Store.md"
+      ]
+    }
+  ],
+  "task_id": "fact-002",
+  "task_type": "fact_lookup"
+}

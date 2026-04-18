@@ -21,6 +21,25 @@
 - Add export paths for graph-aware retrieval systems and GraphRAG pipelines.
 - Offer templates for team workflows, not just solo vaults.
 
+## 0.6.0 Deterministic Eval Harness (2026-04-18)
+
+Phase B-slim adds a committed benchmark harness for measuring deterministic KB behavior:
+
+- `eval/corpora/small-vault` reference corpus: 16 pages, all primary page types, and an engineered raw-source drift case.
+- `eval/tasks.yaml` task suite: 10 tasks with 4 `fact_lookup`, 3 `relationship_trace`, and 3 `drift_detection` cases.
+- Pure-Python grep baseline: no subprocess, no platform-specific grep behavior, deterministic across supported platforms.
+- `octopus-kb` in-process path runner with `neighbors` normalized into stable `related_paths`.
+- Deterministic scoring: fact exact match, relationship F1, and drift precision/recall average.
+- CLI: `octopus-kb eval run` and `octopus-kb eval report`.
+- First v1 benchmark report in `docs/benchmarks/v1.md`.
+
+### Deferred to v0.7+
+
+- Graphify path adapter.
+- Human rating via an `eval rate` subcommand.
+- Multi-provider LLM benchmark matrix.
+- LLM-judge answer quality.
+
 ## 0.5.0 Propose / Validate / Inbox Loop (2026-04-18)
 
 Phase A-min adds the smallest credible agent-assisted KB maintenance loop:

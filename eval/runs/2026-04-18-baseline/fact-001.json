@@ -1,0 +1,48 @@
+{
+  "results": [
+    {
+      "answer": "raw/rag-ops-source.md:2:title: \"RAG Ops Source\"\nraw/rag-ops-source.md:9:# RAG Ops Source\nwiki/concepts/RAG Operations.md:10:  - \"RAG Ops\"",
+      "answer_json": null,
+      "deterministic_score": 1.0,
+      "input_size_chars": 137,
+      "path_name": "grep",
+      "rationale": "expected wiki/concepts/RAG Operations.md, got wiki/concepts/RAG Operations.md",
+      "sources": [
+        "raw/rag-ops-source.md",
+        "wiki/concepts/RAG Operations.md"
+      ]
+    },
+    {
+      "answer": "wiki/concepts/RAG Operations.md",
+      "answer_json": {
+        "aliases": [
+          {
+            "resolves_to": "wiki/concepts/RAG Operations.md",
+            "text": "RAG Ops"
+          }
+        ],
+        "ambiguous": false,
+        "canonical": {
+          "path": "wiki/concepts/RAG Operations.md",
+          "source_of_truth": "canonical",
+          "title": "RAG Operations"
+        },
+        "collisions": [],
+        "next": [
+          "octopus-kb retrieve-bundle \"wiki/concepts/RAG Operations.md\" --vault \"eval/corpora/small-vault\" --json",
+          "octopus-kb neighbors \"wiki/concepts/RAG Operations.md\" --vault \"eval/corpora/small-vault\" --json"
+        ],
+        "term": "RAG Ops"
+      },
+      "deterministic_score": 1.0,
+      "input_size_chars": 31,
+      "path_name": "octopus-kb",
+      "rationale": "expected wiki/concepts/RAG Operations.md, got wiki/concepts/RAG Operations.md",
+      "sources": [
+        "wiki/concepts/RAG Operations.md"
+      ]
+    }
+  ],
+  "task_id": "fact-001",
+  "task_type": "fact_lookup"
+}

@@ -7,15 +7,77 @@ tasks:
     expected:
       canonical_path: "wiki/concepts/RAG Operations.md"
 
+  - id: fact-002
+    type: fact_lookup
+    query: "Vector Store"
+    expected:
+      canonical_path: "wiki/entities/Vector Store.md"
+
+  - id: fact-003
+    type: fact_lookup
+    query: "Knowledge Graph"
+    expected:
+      canonical_path: "wiki/entities/Knowledge Graph.md"
+
+  - id: fact-004
+    type: fact_lookup
+    query: "Late Chunking"
+    expected:
+      canonical_path: "wiki/concepts/Late Chunking.md"
+
   - id: rel-001
     type: relationship_trace
     query: "wiki/concepts/RAG Operations.md"
     expected:
       related_paths:
+        - "raw/rag-ops-source.md"
+        - "wiki/INDEX.md"
+        - "wiki/LOG.md"
+        - "wiki/comparisons/Vector Store vs Knowledge Graph.md"
+        - "wiki/concepts/Evaluation Harness.md"
+        - "wiki/concepts/Retrieval Precision.md"
+        - "wiki/entities/Knowledge Graph.md"
         - "wiki/entities/Vector Store.md"
+        - "wiki/timelines/RAG Knowledge Base Timeline.md"
+
+  - id: rel-002
+    type: relationship_trace
+    query: "wiki/concepts/Late Chunking.md"
+    expected:
+      related_paths:
+        - "raw/late-chunking-source.md"
+        - "wiki/INDEX.md"
+        - "wiki/LOG.md"
+        - "wiki/comparisons/Chunking Strategy Comparison.md"
+        - "wiki/concepts/Retrieval Precision.md"
+        - "wiki/entities/Embedding Model.md"
+        - "wiki/timelines/RAG Knowledge Base Timeline.md"
+
+  - id: rel-003
+    type: relationship_trace
+    query: "wiki/entities/Vector Store.md"
+    expected:
+      related_paths:
+        - "raw/rag-ops-source.md"
+        - "wiki/INDEX.md"
+        - "wiki/comparisons/Vector Store vs Knowledge Graph.md"
+        - "wiki/concepts/RAG Operations.md"
+        - "wiki/concepts/Retrieval Precision.md"
         - "wiki/entities/Knowledge Graph.md"
 
   - id: drift-001
+    type: drift_detection
+    expected:
+      stale_paths:
+        - "wiki/concepts/RAG Operations.md"
+
+  - id: drift-002
+    type: drift_detection
+    expected:
+      stale_paths:
+        - "wiki/concepts/RAG Operations.md"
+
+  - id: drift-003
     type: drift_detection
     expected:
       stale_paths:

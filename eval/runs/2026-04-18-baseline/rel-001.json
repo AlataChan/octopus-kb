@@ -1,0 +1,46 @@
+{
+  "results": [
+    {
+      "answer": "",
+      "answer_json": null,
+      "deterministic_score": 0.0,
+      "input_size_chars": 0,
+      "path_name": "grep",
+      "rationale": "predicted=0 expected=9 f1=0.000",
+      "sources": []
+    },
+    {
+      "answer": "raw/rag-ops-source.md\nwiki/INDEX.md\nwiki/LOG.md\nwiki/comparisons/Vector Store vs Knowledge Graph.md\nwiki/concepts/Evaluation Harness.md\nwiki/concepts/Retrieval Precision.md\nwiki/entities/Knowledge Graph.md\nwiki/entities/Vector Store.md\nwiki/timelines/RAG Knowledge Base Timeline.md",
+      "answer_json": {
+        "related_paths": [
+          "raw/rag-ops-source.md",
+          "wiki/INDEX.md",
+          "wiki/LOG.md",
+          "wiki/comparisons/Vector Store vs Knowledge Graph.md",
+          "wiki/concepts/Evaluation Harness.md",
+          "wiki/concepts/Retrieval Precision.md",
+          "wiki/entities/Knowledge Graph.md",
+          "wiki/entities/Vector Store.md",
+          "wiki/timelines/RAG Knowledge Base Timeline.md"
+        ]
+      },
+      "deterministic_score": 1.0,
+      "input_size_chars": 281,
+      "path_name": "octopus-kb",
+      "rationale": "predicted=9 expected=9 f1=1.000",
+      "sources": [
+        "raw/rag-ops-source.md",
+        "wiki/INDEX.md",
+        "wiki/LOG.md",
+        "wiki/comparisons/Vector Store vs Knowledge Graph.md",
+        "wiki/concepts/Evaluation Harness.md",
+        "wiki/concepts/Retrieval Precision.md",
+        "wiki/entities/Knowledge Graph.md",
+        "wiki/entities/Vector Store.md",
+        "wiki/timelines/RAG Knowledge Base Timeline.md"
+      ]
+    }
+  ],
+  "task_id": "rel-001",
+  "task_type": "relationship_trace"
+}
