@@ -5,6 +5,7 @@
 ### Added
 
 - Add minimal OpenAI-compatible LLM client and config loader.
+- Add proposal schema and atomic append-only storage.
 
 ## [0.4.0] - 2026-04-18
 
