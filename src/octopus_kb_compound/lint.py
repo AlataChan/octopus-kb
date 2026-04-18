@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import re
 
 from octopus_kb_compound.links import (
@@ -82,18 +83,35 @@ def _canonical_pages_by_key(pages: list[PageRecord]) -> dict[str, list[PageRecor
 
 def _canonical_key(page: PageRecord) -> str | None:
     frontmatter = page.frontmatter
+    role = frontmatter.get("role")
+    page_type = frontmatter.get("type")
+    layer = frontmatter.get("layer")
+    source_of_truth = frontmatter.get("source_of_truth")
+    is_raw = role == "raw_source" or page_type == "raw_source"
+
+    if is_raw and source_of_truth != "canonical":
+        return None
+
     canonical_name = frontmatter.get("canonical_name")
     if isinstance(canonical_name, str) and normalize_page_name(canonical_name):
         return normalize_page_name(canonical_name)
 
-    title = str(frontmatter.get("title") or page.title)
-    if frontmatter.get("source_of_truth") == "canonical" and normalize_page_name(title):
+    title = str(frontmatter.get("title") or page.title or "")
+    if source_of_truth == "canonical" and normalize_page_name(title):
         return normalize_page_name(title)
 
-    page_type = frontmatter.get("type")
-    role = frontmatter.get("role")
-    if role != "raw_source" and page_type != "raw_source" and normalize_page_name(title):
+    if is_raw:
+        return None
+
+    if layer != "wiki":
+        return None
+
+    if normalize_page_name(title):
         return normalize_page_name(title)
+
+    stem = Path(page.path).stem
+    if normalize_page_name(stem):
+        return normalize_page_name(stem)
 
     return None
 

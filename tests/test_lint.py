@@ -187,6 +187,81 @@ def test_lint_reports_canonical_alias_collision():
     assert any(f.code == "CANONICAL_ALIAS_COLLISION" for f in findings)
 
 
+def test_canonical_key_ignores_raw_source_with_canonical_name_only():
+    raw_page = PageRecord(
+        path="raw/example.md",
+        title="Example",
+        frontmatter={
+            "title": "Example",
+            "role": "raw_source",
+            "layer": "source",
+            "canonical_name": "Example",
+        },
+        body="",
+    )
+    wiki_page = PageRecord(
+        path="wiki/concepts/example.md",
+        title="Example",
+        frontmatter={
+            "title": "Example",
+            "role": "concept",
+            "layer": "wiki",
+            "source_of_truth": "canonical",
+        },
+        body="",
+    )
+    findings = lint_pages([raw_page, wiki_page])
+    assert not any(f.code == "DUPLICATE_CANONICAL_PAGE" for f in findings)
+
+
+def test_canonical_key_path_stem_fallback_triggers_for_wiki_pages_without_title():
+    titleless_wiki = PageRecord(
+        path="wiki/concepts/example.md",
+        title="",
+        frontmatter={"role": "concept", "layer": "wiki"},
+        body="",
+    )
+    named_wiki = PageRecord(
+        path="wiki/concepts/other.md",
+        title="example",
+        frontmatter={"title": "example", "role": "concept", "layer": "wiki"},
+        body="",
+    )
+    findings = lint_pages([titleless_wiki, named_wiki])
+    assert any(f.code == "DUPLICATE_CANONICAL_PAGE" for f in findings), (
+        "wiki page without title must canonicalize on its path stem and collide with a matching titled wiki page"
+    )
+
+
+def test_canonical_key_honors_raw_source_that_opts_into_canonical():
+    raw_canonical = PageRecord(
+        path="raw/example.md",
+        title="Example",
+        frontmatter={
+            "title": "Example",
+            "role": "raw_source",
+            "layer": "source",
+            "source_of_truth": "canonical",
+        },
+        body="",
+    )
+    wiki_page = PageRecord(
+        path="wiki/concepts/example.md",
+        title="Example",
+        frontmatter={
+            "title": "Example",
+            "role": "concept",
+            "layer": "wiki",
+            "source_of_truth": "canonical",
+        },
+        body="",
+    )
+    findings = lint_pages([raw_canonical, wiki_page])
+    assert any(f.code == "DUPLICATE_CANONICAL_PAGE" for f in findings), (
+        "raw source explicitly marked source_of_truth: canonical must still participate in canonical identity"
+    )
+
+
 def test_lint_resolves_filename_and_relative_path_links():
     pages = [
         PageRecord(

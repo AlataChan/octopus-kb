@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- fix: gate canonical identity for raw sources; add wiki path-stem fallback.
+
 ### Added
 
 - Roadmap implementation execution plan and CLI baseline regression guard.
