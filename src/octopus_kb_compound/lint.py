@@ -1,143 +1,18 @@
 from __future__ import annotations
 
-import re
-
-from octopus_kb_compound.canonical import _canonical_key, _canonical_pages_by_key
-from octopus_kb_compound.links import (
-    build_alias_index,
-    extract_wikilinks,
-    find_alias_collisions,
-    frontmatter_aliases,
-    normalize_page_name,
-)
+from octopus_kb_compound.adapters.obsidian.codec import page_record_to_canonical
+from octopus_kb_compound.adapters.obsidian.lint_obsidian import lint_obsidian_pages
+from octopus_kb_compound.ckr.lint import lint_ckr_pages
 from octopus_kb_compound.models import LintFinding, PageRecord
-from octopus_kb_compound.schema import validate_frontmatter
 
 
 def lint_pages(pages: list[PageRecord]) -> list[LintFinding]:
-    """Return schema findings plus legacy cross-page lint findings.
+    """Return CKR-level findings plus Obsidian-specific wikilink findings.
 
     `MISSING_ROLE` and `MISSING_SUMMARY` remain for backward compatibility;
     they are legacy equivalents of schema missing-field findings.
     """
-    findings: list[LintFinding] = []
-    for page in pages:
-        for sf in validate_frontmatter(page.frontmatter):
-            findings.append(
-                LintFinding(
-                    code=sf.code,
-                    path=page.path,
-                    message=f"{sf.field}: {sf.message}",
-                )
-            )
 
-    alias_index = build_alias_index(pages)
-    title_lookup = {page.title: page for page in pages}
-    inbound_counts = {page.path: 0 for page in pages}
-    canonical_by_key = _canonical_pages_by_key(pages)
-    alias_collisions = find_alias_collisions(pages)
+    canonical_pages = [page_record_to_canonical(page) for page in pages]
+    return lint_ckr_pages(canonical_pages) + lint_obsidian_pages(pages)
 
-    for alias, titles in alias_collisions.items():
-        findings.append(
-            LintFinding(
-                "ALIAS_COLLISION",
-                ",".join(sorted(title_lookup[title].path for title in titles)),
-                f"Alias `{alias}` resolves to multiple pages: {', '.join(sorted(titles))}",
-            )
-        )
-
-    for key, canonical_pages in canonical_by_key.items():
-        if len(canonical_pages) > 1:
-            findings.append(
-                LintFinding(
-                    "DUPLICATE_CANONICAL_PAGE",
-                    ",".join(sorted(page.path for page in canonical_pages)),
-                    f"Canonical identity `{key}` is declared by multiple pages.",
-                )
-            )
-
-    for page in pages:
-        frontmatter = page.frontmatter
-        role = frontmatter.get("role")
-        layer = frontmatter.get("layer")
-        summary = frontmatter.get("summary")
-
-        if not role:
-            findings.append(LintFinding("MISSING_ROLE", page.path, "Page is missing `role`."))
-        if layer == "wiki" and not summary:
-            findings.append(LintFinding("MISSING_SUMMARY", page.path, "Wiki page is missing `summary`."))
-
-        findings.extend(_lint_frontmatter_aliases(page, alias_index, alias_collisions, canonical_by_key))
-
-        for link in extract_wikilinks(_strip_code_blocks(page.body)):
-            if _should_ignore_link_target(link):
-                continue
-            key = normalize_page_name(link)
-            canonical_title = alias_index.get(key)
-            if canonical_title is None:
-                findings.append(LintFinding("BROKEN_LINK", page.path, f"Broken wikilink: [[{link}]]"))
-                continue
-            target = title_lookup[canonical_title]
-            inbound_counts[target.path] += 1
-
-    for page in pages:
-        if page.frontmatter.get("role") == "concept" and inbound_counts.get(page.path, 0) == 0:
-            findings.append(LintFinding("ORPHAN_PAGE", page.path, "Concept page has no inbound wikilinks."))
-
-    return findings
-
-
-def _lint_frontmatter_aliases(
-    page: PageRecord,
-    alias_index: dict[str, str],
-    alias_collisions: dict[str, list[str]],
-    canonical_by_key: dict[str, list[PageRecord]],
-) -> list[LintFinding]:
-    findings: list[LintFinding] = []
-    for alias in frontmatter_aliases(page):
-        key = normalize_page_name(alias)
-        if not key:
-            findings.append(LintFinding("UNRESOLVED_ALIAS", page.path, f"Frontmatter alias cannot resolve: {alias!r}"))
-            continue
-
-        canonical_targets = [target for target in canonical_by_key.get(key, []) if target.path != page.path]
-        if canonical_targets:
-            findings.append(
-                LintFinding(
-                    "CANONICAL_ALIAS_COLLISION",
-                    page.path,
-                    f"Frontmatter alias `{alias}` collides with canonical page `{canonical_targets[0].title}`.",
-                )
-            )
-            continue
-
-        if key in alias_collisions:
-            continue
-
-        if alias_index.get(key) != page.title:
-            findings.append(LintFinding("UNRESOLVED_ALIAS", page.path, f"Frontmatter alias does not resolve to this page: {alias}"))
-    return findings
-
-
-def _strip_code_blocks(text: str) -> str:
-    text = re.sub(r"```[\s\S]*?```", "", text)
-    text = re.sub(r"`[^`\n]+`", "", text)
-    return text
-
-
-def _should_ignore_link_target(target: str) -> bool:
-    if target.endswith("/"):
-        return True
-    if "[" in target or "]" in target:
-        return True
-    if '"' in target or "'" in target:
-        return True
-    if "\n" in target:
-        return True
-    if "," in target and "/" not in target and ".md" not in target:
-        segments = [segment.strip() for segment in target.split(",")]
-        if segments and all(segment and segment == segment.lower() for segment in segments):
-            return True
-    if not any(char.isalpha() for char in target):
-        return True
-    return False

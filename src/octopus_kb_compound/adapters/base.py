@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 from octopus_kb_compound.ckr.models import CanonicalPage, CanonicalRef, StorageRef
@@ -21,6 +22,15 @@ class WriteReceipt:
         }
 
 
+@dataclass(slots=True)
+class PreparedWrite:
+    """Adapter write plan prepared before audit-first commit."""
+
+    content_by_path: dict[str, str]
+    created: list[StorageRef] = field(default_factory=list)
+    modified: list[StorageRef] = field(default_factory=list)
+
+
 class KnowledgeStore(Protocol):
     """Protocol implemented by endpoint adapters."""
 
@@ -33,6 +43,14 @@ class KnowledgeStore(Protocol):
     def resolve_alias(self, term: str) -> CanonicalRef | None:
         ...
 
-    def apply_ops(self, ops: list[CanonicalOp]) -> WriteReceipt:
+    def prepare_ops(self, ops: list[CanonicalOp]) -> PreparedWrite:
         ...
 
+    def apply_ops(
+        self,
+        ops: list[CanonicalOp],
+        *,
+        prepared: PreparedWrite | None = None,
+        staged_dir: Path | None = None,
+    ) -> WriteReceipt:
+        ...

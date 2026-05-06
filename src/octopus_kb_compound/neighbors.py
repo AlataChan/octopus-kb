@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.canonical import _canonical_key
 from octopus_kb_compound.links import (
     build_alias_index,
@@ -11,7 +12,6 @@ from octopus_kb_compound.links import (
     normalize_page_name,
 )
 from octopus_kb_compound.models import PageRecord
-from octopus_kb_compound.vault import scan_markdown_files
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +35,7 @@ class NeighborsResult:
 
 
 def compute_neighbors(page_rel_path: str, vault: Path) -> NeighborsResult:
-    pages = scan_markdown_files(vault)
+    pages = ObsidianStore(vault).list_page_records()
     target = _page_by_path(pages, page_rel_path)
     if target is None:
         raise ValueError(f"Page not found in vault: {page_rel_path}")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.canonical import _canonical_pages_by_key
 from octopus_kb_compound.links import (
     build_alias_index,
@@ -10,7 +11,6 @@ from octopus_kb_compound.links import (
     normalize_page_name,
 )
 from octopus_kb_compound.models import PageRecord
-from octopus_kb_compound.vault import scan_markdown_files
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,7 +34,7 @@ class LookupResult:
 
 
 def lookup_term(term: str, vault: Path) -> LookupResult:
-    pages = scan_markdown_files(vault)
+    pages = ObsidianStore(vault).list_page_records()
     key = normalize_page_name(term)
     title_pages = _pages_by_title(pages)
     alias_collisions = find_alias_collisions(pages)

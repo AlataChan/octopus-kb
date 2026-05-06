@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from octopus_kb_compound import audit
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.canonical import _canonical_pages_by_key
+from octopus_kb_compound.ckr.operations import operations_from_proposal
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.models import LintFinding, PageRecord
-from octopus_kb_compound.profile import load_vault_profile
 from octopus_kb_compound.proposals import load_proposal
 from octopus_kb_compound.validators.declarative import (
     VaultState,
@@ -22,7 +22,6 @@ from octopus_kb_compound.validators.declarative import (
     evaluate_chain,
     load_rules,
 )
-from octopus_kb_compound.vault import scan_markdown_files
 
 
 SEVERE_LINT_CODES = {
@@ -124,6 +123,8 @@ def apply_proposal(
         _write_decision(root, "rejections", proposal, [], status="rejected_write_boundary", reason=boundary_error)
         return ApplyResult(status="rejected_write_boundary", verdict=verdict.final if verdict else None, message=boundary_error)
 
+    store = ObsidianStore(root)
+    ops = operations_from_proposal(proposal)
     staging = root / ".octopus-kb" / "staging" / proposal_id
     if staging.exists():
         shutil.rmtree(staging)
@@ -133,23 +134,20 @@ def apply_proposal(
     new_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        staged_content = _build_staged_content(root, proposal)
-        created: list[str] = []
-        modified: list[str] = []
-        for rel_path, content in staged_content.items():
+        prepared = store.prepare_ops(ops)
+        created = [ref.locator for ref in prepared.created]
+        modified = [ref.locator for ref in prepared.modified]
+        for rel_path, content in prepared.content_by_path.items():
             target = root / rel_path
             if target.exists():
-                modified.append(rel_path)
                 backup_target = backup_dir / rel_path
                 backup_target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(target, backup_target)
-            else:
-                created.append(rel_path)
             staged_target = new_dir / rel_path
             staged_target.parent.mkdir(parents=True, exist_ok=True)
             staged_target.write_text(content, encoding="utf-8")
 
-        if _introduces_severe_lint(root, staged_content):
+        if _introduces_severe_lint(root, prepared.content_by_path):
             shutil.rmtree(staging, ignore_errors=True)
             _write_decision(root, "rejections", proposal, [], status="rejected_post_lint", reason="post-apply lint failed")
             return ApplyResult(status="rejected_post_lint", verdict=verdict.final if verdict else None)
@@ -167,10 +165,7 @@ def apply_proposal(
             override=override,
         )
 
-        for rel_path in sorted(staged_content):
-            destination = root / rel_path
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(new_dir / rel_path, destination)
+        store.apply_ops(ops, prepared=prepared, staged_dir=new_dir)
 
         audit.mark_applied(audit_path, audit.vault_markdown_sha(root))
         shutil.rmtree(staging, ignore_errors=True)
@@ -215,85 +210,21 @@ def recover_proposal(proposal_id: str, vault: Path | str) -> ApplyResult:
 
 
 def _build_vault_state(vault: Path) -> VaultState:
-    pages = scan_markdown_files(vault, load_vault_profile(vault))
+    pages = ObsidianStore(vault).list_page_records()
     canonical_keys = set(_canonical_pages_by_key(pages))
     page_titles = {page.title for page in pages}
     return VaultState(canonical_keys=canonical_keys, page_titles=page_titles)
 
 
-def _build_staged_content(vault: Path, proposal: dict[str, Any]) -> dict[str, str]:
-    content_by_path: dict[str, str] = {}
-    for op in proposal.get("operations", []):
-        op_name = op.get("op")
-        rel_path = _op_target(op)
-        if rel_path is None:
-            continue
-        if op_name == "append_log":
-            current = content_by_path.get(rel_path)
-            if current is None:
-                path = vault / rel_path
-                current = path.read_text(encoding="utf-8") if path.exists() else ""
-            if current and not current.endswith("\n"):
-                current += "\n"
-            content_by_path[rel_path] = current + str(op["entry"]) + "\n"
-        elif op_name == "create_page":
-            content_by_path[rel_path] = _render_page(op.get("frontmatter", {}), str(op.get("body", "")))
-        elif op_name == "add_alias":
-            path = vault / rel_path
-            current = content_by_path.get(rel_path)
-            if current is None:
-                current = path.read_text(encoding="utf-8")
-            frontmatter, body = parse_document(current)
-            aliases = frontmatter.get("aliases")
-            if not isinstance(aliases, list):
-                aliases = []
-            alias = str(op["alias"])
-            if alias not in aliases:
-                aliases.append(alias)
-            frontmatter["aliases"] = aliases
-            content_by_path[rel_path] = _render_page(frontmatter, body)
-    return content_by_path
-
-
-def _render_page(frontmatter: dict[str, Any], body: str) -> str:
-    payload = _render_yaml_floor(frontmatter)
-    if body and not body.endswith("\n"):
-        body += "\n"
-    return f"---\n{payload}---\n{body}"
-
-
-def _render_yaml_floor(frontmatter: dict[str, Any]) -> str:
-    lines: list[str] = []
-    for key, value in frontmatter.items():
-        if value is None:
-            continue
-        if isinstance(value, list):
-            if not value:
-                lines.append(f"{key}: []")
-            else:
-                lines.append(f"{key}:")
-                for item in value:
-                    lines.append(f"  - {_quote_scalar(item)}")
-            continue
-        lines.append(f"{key}: {_quote_scalar(value)}")
-    return "\n".join(lines) + "\n"
-
-
-def _quote_scalar(value: Any) -> str:
-    text = str(value)
-    escaped = text.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
-
-
 def _introduces_severe_lint(vault: Path, staged_content: dict[str, str]) -> bool:
-    before = _severe_lint_signature(lint_pages(scan_markdown_files(vault, load_vault_profile(vault))))
+    before = _severe_lint_signature(lint_pages(ObsidianStore(vault).list_page_records()))
     after_pages = _overlay_pages(vault, staged_content)
     after = _severe_lint_signature(lint_pages(after_pages))
     return bool(after - before)
 
 
 def _overlay_pages(vault: Path, staged_content: dict[str, str]):
-    pages = scan_markdown_files(vault, load_vault_profile(vault))
+    pages = ObsidianStore(vault).list_page_records()
     replaced = set(staged_content)
     result = [page for page in pages if page.path not in replaced]
     for rel_path, content in staged_content.items():
