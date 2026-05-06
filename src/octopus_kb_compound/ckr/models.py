@@ -106,7 +106,6 @@ class CanonicalPage:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        _require_non_empty("title", self.title)
         _require_non_empty("kind", self.kind)
         _require_non_empty("body_format", self.body_format)
 
@@ -155,4 +154,3 @@ def _optional_str(value: Any) -> str | None:
 def _require_non_empty(name: str, value: str) -> None:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
-

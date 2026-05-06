@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from octopus_kb_compound.adapters.obsidian.codec import canonical_to_page_record
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
+from octopus_kb_compound.ckr.models import StorageRef
 from octopus_kb_compound.links import build_alias_index, extract_wikilinks, normalize_page_name
 from octopus_kb_compound.models import PageRecord
-from octopus_kb_compound.profile import load_vault_profile
-from octopus_kb_compound.vault import load_page, scan_markdown_files
 
 
 def find_impacted_pages(page: str | Path, vault: str | Path) -> list[str]:
     vault_path = Path(vault)
-    page_path = Path(page)
-    if not page_path.is_absolute():
-        page_path = vault_path / page_path
-
-    target = load_page(page_path, root=vault_path)
-    pages = scan_markdown_files(vault_path, load_vault_profile(vault_path))
+    store = ObsidianStore(vault_path)
+    target_ref = StorageRef(adapter="obsidian", locator=_relative_page_path(page, vault_path))
+    target = canonical_to_page_record(store.read_page(target_ref))
+    pages = store.list_page_records()
     by_title = {page.title: page for page in pages}
     alias_index = build_alias_index(pages)
 
@@ -67,3 +66,13 @@ def _append_entry(paths: list[str], pages: list[PageRecord], role: str) -> None:
 def _append(paths: list[str], path: str) -> None:
     if path not in paths:
         paths.append(path)
+
+
+def _relative_page_path(page: str | Path, vault: Path) -> str:
+    page_path = Path(page)
+    if not page_path.is_absolute():
+        return page_path.as_posix()
+    try:
+        return page_path.resolve().relative_to(vault.resolve()).as_posix()
+    except ValueError:
+        return page_path.as_posix()

@@ -13,6 +13,7 @@ from octopus_kb_compound.ckr.operations import (
     CanonicalOp,
     CreatePageOp,
     operation_from_dict,
+    operations_from_proposal,
 )
 
 __all__ = [
@@ -26,5 +27,5 @@ __all__ = [
     "SourceSpan",
     "StorageRef",
     "operation_from_dict",
+    "operations_from_proposal",
 ]
-

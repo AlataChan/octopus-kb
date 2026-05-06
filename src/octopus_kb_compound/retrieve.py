@@ -3,10 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.links import build_alias_index, extract_wikilinks, frontmatter_aliases, normalize_page_name
 from octopus_kb_compound.models import PageRecord
-from octopus_kb_compound.profile import load_vault_profile
-from octopus_kb_compound.vault import scan_markdown_files
 
 
 @dataclass(slots=True)
@@ -45,10 +44,11 @@ def build_retrieval_bundle(
     vault: str | Path, query: str, *, max_tokens: int = 0
 ) -> RetrievalBundle:
     root = Path(vault)
-    pages = scan_markdown_files(root, load_vault_profile(root))
+    store = ObsidianStore(root)
+    pages = store.list_page_records()
     alias_index = build_alias_index(pages)
     by_title = {page.title: page for page in pages}
-    markdown_by_path = _markdown_by_path(root, pages)
+    markdown_by_path = store.markdown_by_path(pages)
 
     warnings: list[dict[str, str]] = []
     schema = _first_path_by_role_or_path(pages, "schema", "AGENTS.md")

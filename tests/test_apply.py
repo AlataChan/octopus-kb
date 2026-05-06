@@ -80,6 +80,28 @@ def test_validate_apply_appends_log_and_writes_audit(tmp_path):
     assert entry["status"] == "applied"
 
 
+def test_apply_proposal_commits_via_obsidian_store(tmp_path, monkeypatch):
+    vault = _seed(tmp_path)
+    proposal = _append_log_proposal("p-store")
+    import octopus_kb_compound.apply as apply_mod
+    from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
+
+    calls = {"apply_ops": 0}
+
+    class TrackingStore(ObsidianStore):
+        def apply_ops(self, *args, **kwargs):
+            calls["apply_ops"] += 1
+            return super().apply_ops(*args, **kwargs)
+
+    monkeypatch.setattr(apply_mod, "ObsidianStore", TrackingStore)
+
+    result = apply_mod.apply_proposal(vault, proposal)
+
+    assert result.status == "applied"
+    assert calls["apply_ops"] == 1
+    assert "2026-04-18: hello" in (vault / "wiki" / "LOG.md").read_text(encoding="utf-8")
+
+
 def test_validate_apply_creates_new_concept_page_with_audit(tmp_path):
     vault = _seed(tmp_path)
     good = _append_log_proposal("p-create")

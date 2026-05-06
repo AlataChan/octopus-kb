@@ -31,7 +31,9 @@ Endpoint adapters implement the `KnowledgeStore` protocol:
 
 `WriteReceipt` reports created and modified `StorageRef`s. The Obsidian adapter uses those refs to preserve the existing audit ledger shape (`created`, `modified`, and staging paths). Future adapters can map their native ids into `StorageRef` without leaking them into current CLI JSON contracts.
 
-During v0.7, existing modules such as `frontmatter.py`, `links.py`, and `vault.py` remain compatibility shims while callers migrate behind the adapter boundary.
+The Obsidian implementation is `ObsidianStore`. Read flows (`lookup`, `neighbors`, `impacted-pages`, and `retrieve-bundle`) go through this adapter boundary, while existing modules such as `frontmatter.py`, `links.py`, and `vault.py` remain compatibility shims for public imports and lower-level parsing helpers.
+
+Lint is split into CKR-level checks (`ckr.lint`) and Obsidian-specific checks (`adapters.obsidian.lint_obsidian`). Apply uses CKR operations and commits through `ObsidianStore.apply_ops()` after the audit-first staging and pending-audit write are complete.
 
 ## Retrieval Path
 
