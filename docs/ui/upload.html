@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>octopus-kb Document Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#c94600" />
+  <link rel="icon" type="image/png" href="/ui/assets/octopus-praser-icon-128.png" />
+  <link rel="apple-touch-icon" href="/ui/assets/octopus-praser-icon-1024.png" />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #0a0a0a;
+      --muted: #525252;
+      --faint: #a3a3a3;
+      --border: #e5e5e5;
+      --border-strong: #d4d4d4;
+      --hover: #f5f5f5;
+      --subtle: #fafafa;
+      --brand: #c94600;
+      --brand-hover: #a33700;
+      --brand-soft: #fff1e8;
+      --active: var(--brand);
+      --active-hover: var(--brand-hover);
+      --error: #dc2626;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: 56px 1fr;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-width: 0;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      flex: 0 0 auto;
+    }
+
+    .brand-copy {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .brand .dot {
+      color: var(--text);
+    }
+
+    .brand .lede {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    .links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .links a {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      text-underline-offset: 3px;
+    }
+
+    .links a:hover {
+      color: var(--text);
+      text-decoration: underline;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .col.sidebar {
+      border-right: 1px solid var(--border);
+    }
+
+    .col.workspace {
+      min-width: 0;
+    }
+
+    .col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 57px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .col-head .label {
+      color: var(--faint);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .col-head h2 {
+      margin: 2px 0 0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .col-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .workspace-body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    form {
+      display: contents;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .field > label,
+    .field > .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .field input[type="text"],
+    .field input[type="number"],
+    .field input[type="password"],
+    .field select {
+      width: 100%;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .field input[type="text"]:focus,
+    .field input[type="number"]:focus,
+    .field input[type="password"]:focus,
+    .field select:focus {
+      outline: 1px solid var(--active);
+      outline-offset: 1px;
+      border-color: var(--active);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .parse-options {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .checks {
+      display: grid;
+      gap: 8px;
+      padding-top: 2px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .check input[type="checkbox"] {
+      appearance: none;
+      position: relative;
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: 2px;
+      background: var(--bg);
+      cursor: pointer;
+    }
+
+    .check input[type="checkbox"]:checked {
+      background: var(--active);
+      border-color: var(--active);
+    }
+
+    .check input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 0;
+      width: 5px;
+      height: 9px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .dropzone {
+      display: block;
+      margin-bottom: 10px;
+      padding: 20px 16px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 4px;
+      background: var(--subtle);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--active);
+      background: var(--brand-soft);
+    }
+
+    .dropzone strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .dropzone .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .dropzone .pick {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      margin-top: 12px;
+      padding: 0 14px;
+      border: 1px solid var(--active);
+      border-radius: 4px;
+      background: var(--active);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .file-list {
+      max-height: 124px;
+      overflow-y: auto;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .upload-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .section-head .label {
+      color: var(--faint);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .section-head h3 {
+      margin: 2px 0 0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .upload-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.3fr) minmax(240px, 0.7fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .upload-grid .dropzone {
+      min-height: 148px;
+      margin-bottom: 0;
+    }
+
+    .upload-side {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .upload-side .file-list {
+      flex: 1;
+      min-height: 82px;
+    }
+
+    .file-list > div {
+      margin-bottom: 3px;
+    }
+
+    .file-list > div:last-child {
+      margin-bottom: 0;
+    }
+
+    .file-list strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .hint {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .hint code {
+      padding: 1px 4px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--subtle);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .asset-url-panel {
+      margin: 8px 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg);
+    }
+
+    .asset-url-panel summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      color: var(--muted);
+      cursor: pointer;
+      list-style: none;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .asset-url-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .asset-url-panel summary::before {
+      content: "+";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 2px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .asset-url-panel[open] summary {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .asset-url-panel[open] summary::before {
+      content: "−";
+    }
+
+    .asset-url-body {
+      padding: 12px;
+    }
+
+    .asset-url-body .field {
+      margin-bottom: 10px;
+    }
+
+    .asset-url-status.success {
+      color: var(--text);
+    }
+
+    .asset-url-status.error {
+      color: var(--error);
+    }
+
+    .switches {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      flex: 0 0 36px;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      width: 0;
+      height: 0;
+      opacity: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: var(--bg);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .switch-track::before {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--faint);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .switch input:checked + .switch-track {
+      border-color: var(--active);
+      background: var(--active);
+    }
+
+    .switch input:checked + .switch-track::before {
+      transform: translateX(16px);
+      background: #ffffff;
+    }
+
+    .segmented {
+      display: flex;
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      background: var(--bg);
+    }
+
+    .seg-btn {
+      display: inline-flex;
+      flex: 1 1 0;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      height: 32px;
+      padding: 0 10px;
+      border: none;
+      background: var(--bg);
+      color: var(--muted);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+
+    .seg-btn + .seg-btn {
+      border-left: 1px solid var(--border);
+    }
+
+    .seg-btn.active {
+      background: var(--active);
+      color: #ffffff;
+    }
+
+    .seg-btn:hover:not(.active) {
+      background: var(--brand-soft);
+      color: var(--text);
+    }
+
+    .mode-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      overflow: visible;
+      border: none;
+      background: transparent;
+    }
+
+    .mode-options .seg-btn {
+      flex: none;
+      flex-direction: column;
+      gap: 3px;
+      height: 46px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .mode-options .seg-btn + .seg-btn {
+      border-left: 1px solid var(--border-strong);
+    }
+
+    .mode-options .seg-btn span {
+      overflow: hidden;
+      max-width: 100%;
+      color: inherit;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.72;
+      text-overflow: ellipsis;
+    }
+
+    .auth-banner {
+      padding: 4px 0;
+    }
+
+    .auth-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .actions,
+    .result-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button.primary,
+    button.secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 4px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button.primary {
+      border: 1px solid var(--active);
+      background: var(--active);
+      color: #ffffff;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: var(--active-hover);
+      border-color: var(--active-hover);
+    }
+
+    button.secondary {
+      border: 1px solid var(--border-strong);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      border-color: var(--active);
+      background: var(--brand-soft);
+      color: var(--active-hover);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .result-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--subtle);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .status.success {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    .status.error {
+      border-color: rgba(220, 38, 38, 0.3);
+      background: rgba(220, 38, 38, 0.04);
+      color: var(--error);
+    }
+
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    .status.working span::after {
+      content: "";
+      display: inline-block;
+      width: 1ch;
+      animation: cursor-blink 1s steps(1) infinite;
+    }
+
+    .summary {
+      display: flex;
+      gap: 16px;
+      min-width: 0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .metric span {
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      max-width: 220px;
+      overflow: hidden;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-section {
+      display: block;
+      flex: 1 0 auto;
+      min-height: 360px;
+      padding: 16px 20px 24px;
+    }
+
+    .result-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px 16px;
+      margin: -16px -20px 0;
+      padding: 16px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .file-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+      min-height: 24px;
+    }
+
+    .file-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 220px;
+      height: 24px;
+      overflow: hidden;
+      padding: 0 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      background: var(--bg);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .file-tab:hover {
+      border-color: var(--active);
+      background: var(--brand-soft);
+      color: var(--active-hover);
+    }
+
+    .file-tab.active {
+      border-color: var(--active);
+      background: var(--active);
+      color: #ffffff;
+    }
+
+    .view-tabs {
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+    }
+
+    .view-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      padding: 0 16px;
+      border: none;
+      background: var(--bg);
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+
+    .view-tab + .view-tab {
+      border-left: 1px solid var(--border);
+    }
+
+    .view-tab:hover:not(.active) {
+      background: var(--brand-soft);
+      color: var(--active-hover);
+    }
+
+    .view-tab.active {
+      background: var(--active);
+      color: #ffffff;
+    }
+
+    .result-viewport {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: visible;
+      padding: 12px 0 0;
+    }
+
+    .result-view {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .empty {
+      padding: 18px 16px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 4px;
+      background: var(--subtle);
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .empty.compact {
+      padding: 14px 16px;
+    }
+
+    .markdown-output,
+    #result-json {
+      flex: none;
+      min-height: 0;
+      margin: 0;
+      overflow-x: auto;
+      overflow-y: visible;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--subtle);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #result-json {
+      white-space: pre;
+      word-break: normal;
+    }
+
+    @media (max-width: 768px) {
+      html,
+      body {
+        height: auto;
+        min-height: 100%;
+        overflow: auto;
+      }
+
+      body {
+        display: block;
+      }
+
+      header {
+        min-height: 56px;
+        align-items: flex-start;
+        padding: 12px 16px;
+      }
+
+      .brand {
+        display: block;
+      }
+
+      .brand .lede {
+        display: block;
+        margin-top: 4px;
+        white-space: normal;
+      }
+
+      main {
+        display: block;
+        overflow: visible;
+      }
+
+      .col {
+        overflow: visible;
+      }
+
+      .col.sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .col-body {
+        overflow-y: visible;
+        padding: 16px;
+      }
+
+      .workspace-body {
+        overflow-y: visible;
+      }
+
+      .upload-section,
+      .result-section {
+        padding: 16px;
+      }
+
+      .upload-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .col-head {
+        padding: 14px 16px;
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .mode-options {
+        grid-template-columns: 1fr;
+      }
+
+      .result-meta,
+      .summary {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .result-toolbar {
+        grid-template-columns: 1fr;
+        margin: -16px -16px 0;
+        padding: 16px 16px 10px;
+      }
+
+      .result-viewport {
+        overflow: visible;
+        padding: 12px 0 0;
+      }
+
+      .markdown-output,
+      #result-json {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img
+        class="brand-logo"
+        src="/ui/assets/octopus-praser-icon-128.png"
+        srcset="/ui/assets/octopus-praser-icon-64.png 64w, /ui/assets/octopus-praser-icon-128.png 128w, /ui/assets/octopus-praser-icon-1024.png 1024w"
+        sizes="36px"
+        alt="octopus-kb logo"
+        width="36"
+        height="36"
+      />
+      <div class="brand-copy">
+        <h1>octopus-kb</h1>
+        <span class="lede">Document Upload</span>
+      </div>
+    </div>
+    <nav class="links">
+      <a href="/docs" target="_blank" rel="noreferrer">API Docs</a>
+      <a href="/health" target="_blank" rel="noreferrer">Health</a>
+    </nav>
+  </header>
+
+  <main>
+    <form id="parse-form" autocomplete="off">
+    <section class="col sidebar" aria-labelledby="sidebar-head">
+      <div class="col-head" id="sidebar-head">
+        <div>
+          <div class="label">Settings</div>
+          <h2>解析配置</h2>
+        </div>
+      </div>
+      <div class="col-body">
+          <div class="row parse-options">
+            <div class="field">
+              <label for="mode">解析模式</label>
+              <input id="mode" name="mode" type="hidden" value="balanced" />
+              <div class="segmented mode-options" id="mode-segmented" role="group" aria-label="解析模式">
+                <button type="button" class="seg-btn" data-target="mode" data-value="fast">快速<span>fast</span></button>
+                <button type="button" class="seg-btn active" data-target="mode" data-value="balanced">均衡<span>balanced</span></button>
+                <button type="button" class="seg-btn" data-target="mode" data-value="accurate">精准<span>accurate</span></button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="lang">语言</label>
+              <select id="lang" name="lang">
+                <option value="ch" selected>简体中文 (ch)</option>
+                <option value="en">English (en)</option>
+                <option value="chinese_cht">繁體中文 (chinese_cht)</option>
+                <option value="japan">日本語 (japan)</option>
+                <option value="korean">한국어 (korean)</option>
+                <option value="latin">Latin (latin)</option>
+                <option value="arabic">العربية (arabic)</option>
+                <option value="cyrillic">Кириллица (cyrillic)</option>
+                <option value="th">ไทย (th)</option>
+                <option value="el">Ελληνικά (el)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="start-page">起始页</label>
+              <input id="start-page" name="start_page" type="number" min="0" value="0" />
+            </div>
+            <div class="field">
+              <label for="end-page">结束页</label>
+              <input id="end-page" name="end_page" type="number" min="0" value="99999" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="image-dpi">图片 DPI</label>
+              <input id="image-dpi" name="image_dpi" type="number" min="72" max="600" value="300" />
+            </div>
+            <div class="field">
+              <span class="label">选项</span>
+              <div class="checks">
+                <label class="switch-row">
+                  <span>提取图片</span>
+                  <span class="switch"><input id="extract-images" type="checkbox" /><span class="switch-track"></span></span>
+                </label>
+                <label class="switch-row">
+                  <span>LLM 文本元数据</span>
+                  <span class="switch"><input id="enrich-metadata" type="checkbox" /><span class="switch-track"></span></span>
+                </label>
+                <label class="switch-row">
+                  <span>LLM 图片描述</span>
+                  <span class="switch"><input id="enrich-images" type="checkbox" /><span class="switch-track"></span></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <details id="asset-url-panel" class="asset-url-panel">
+            <summary>图片 URL 配置（CDN / Public Base URL）</summary>
+            <div class="asset-url-body">
+              <div class="field">
+                <label for="public-base-url">Public Base URL</label>
+                <input id="public-base-url" type="text" placeholder="例如 https://cdn.example.com" autocomplete="off" />
+                <p class="hint">替换解析输出中图片 URL 的前缀。设为生产环境的 CDN 地址，下游 RAG 平台拉取的就是真实可达的图片地址。留空表示使用服务默认 (<code>API_BASE_URL</code> 环境变量)。修改对后续解析生效。</p>
+              </div>
+              <div class="actions">
+                <button id="save-asset-url" class="secondary" type="button">保存 URL 配置</button>
+                <span id="asset-url-status" class="hint asset-url-status"></span>
+              </div>
+            </div>
+          </details>
+
+          <details id="model-config-panel" class="asset-url-panel">
+            <summary>模型配置（LLM Provider）</summary>
+            <div class="asset-url-body">
+              <div id="admin-auth-banner" class="auth-banner">
+                <div class="field">
+                  <label for="admin-token-input">Admin Token</label>
+                  <input id="admin-token-input" type="password" autocomplete="off" placeholder="输入 ENRICH_ADMIN_TOKEN" />
+                </div>
+                <div class="actions">
+                  <button id="verify-admin-token" class="primary" type="button">验证</button>
+                  <span id="admin-auth-status" class="hint"></span>
+                </div>
+              </div>
+
+              <div id="admin-config-form" hidden>
+                <div class="auth-row">
+                  <span class="hint" style="color:var(--muted)">已认证 ✓</span>
+                  <button id="admin-logout" class="secondary" type="button" style="padding:0 10px;height:24px;font-size:11px;">退出登录</button>
+                </div>
+
+                <div class="switches">
+                  <label class="switch-row">
+                    <span>文本元数据增强 (ENRICH_ENABLED)</span>
+                    <span class="switch"><input id="cfg-enrich-enabled" type="checkbox" /><span class="switch-track"></span></span>
+                  </label>
+                  <label class="switch-row">
+                    <span>图片视觉增强 (ENRICH_IMAGES_ENABLED)</span>
+                    <span class="switch"><input id="cfg-images-enabled" type="checkbox" /><span class="switch-track"></span></span>
+                  </label>
+                </div>
+
+                <div class="field">
+                  <label for="cfg-base-url">Base URL</label>
+                  <input id="cfg-base-url" type="text" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="cfg-model">Model</label>
+                  <input id="cfg-model" type="text" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="cfg-api-key">API Key</label>
+                  <input id="cfg-api-key" type="password" autocomplete="off" placeholder="保留掩码 = 不修改" />
+                  <p class="hint">留空+保存=清空 key。输入掩码（如 <code>sk-***...abcd</code>）= 保持原值不变。</p>
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="cfg-timeout">Timeout (s)</label>
+                    <input id="cfg-timeout" type="number" min="5" max="600" />
+                  </div>
+                  <div class="field">
+                    <label for="cfg-max-tokens">Max tokens</label>
+                    <input id="cfg-max-tokens" type="number" min="1" max="100000" />
+                  </div>
+                </div>
+
+                <details id="vision-overrides" class="asset-url-panel" style="margin-top:10px;">
+                  <summary>高级：分离视觉模型（可选）</summary>
+                  <div class="asset-url-body">
+                    <div class="field">
+                      <label for="cfg-vision-model">Vision Model Override</label>
+                      <input id="cfg-vision-model" type="text" autocomplete="off" placeholder="留空 = 复用上面 Model" />
+                    </div>
+                    <div class="field">
+                      <label for="cfg-vision-base-url">Vision Base URL Override</label>
+                      <input id="cfg-vision-base-url" type="text" autocomplete="off" placeholder="留空 = 复用上面 Base URL" />
+                    </div>
+                    <div class="field">
+                      <label for="cfg-vision-api-key">Vision API Key Override</label>
+                      <input id="cfg-vision-api-key" type="password" autocomplete="off" placeholder="留空 = 复用上面 API Key" />
+                    </div>
+                    <div class="field">
+                      <span class="label">Transport mode</span>
+                      <div class="segmented" id="cfg-transport-mode" role="group">
+                        <button type="button" class="seg-btn active" data-value="auto">auto</button>
+                        <button type="button" class="seg-btn" data-value="url">url</button>
+                        <button type="button" class="seg-btn" data-value="base64">base64</button>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <div id="cfg-sources" class="hint" style="margin-top:10px;font-family:var(--font-mono);font-size:11px;"></div>
+
+                <div class="actions" style="margin-top:12px;">
+                  <button id="cfg-save" class="primary" type="button">💾 保存</button>
+                  <button id="cfg-test" class="secondary" type="button">🧪 测试连通性</button>
+                  <button id="cfg-reset-defaults" class="secondary" type="button">恢复默认</button>
+                </div>
+                <div id="cfg-status" class="hint" style="margin-top:8px;"></div>
+              </div>
+            </div>
+          </details>
+
+      </div>
+    </section>
+
+    <section class="col workspace" aria-labelledby="workspace-head">
+      <div class="col-head" id="workspace-head">
+        <div>
+          <div class="label">Workspace</div>
+          <h2>文件与结果</h2>
+        </div>
+        <div class="result-meta">
+          <div id="status" class="status"><span>等待上传</span></div>
+          <div id="summary" class="summary" hidden>
+            <div class="metric"><span>Task ID</span><strong id="task-id">-</strong></div>
+            <div class="metric"><span>Status</span><strong id="task-status">-</strong></div>
+            <div class="metric"><span>Time</span><strong id="processing-time">-</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="workspace-body">
+      <section class="upload-section" aria-labelledby="upload-head">
+        <div class="section-head" id="upload-head">
+          <div>
+            <div class="label">Files</div>
+            <h3>上传文档</h3>
+          </div>
+        </div>
+        <div class="upload-grid">
+          <label id="file-dropzone" class="dropzone" tabindex="0">
+            <strong>拖拽文件到这里，或点击选择文件</strong>
+            <div class="hint">支持 PDF、图片、Office 文档，可一次选择多个文件</div>
+            <span class="pick">选择文件</span>
+            <input id="files" name="files" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.docx,.pptx,.xlsx" />
+          </label>
+          <div class="upload-side">
+            <div id="file-list" class="file-list" aria-live="polite">尚未选择文件</div>
+            <div class="actions">
+              <button id="submit" class="primary" type="submit">上传并解析</button>
+              <button id="clear" class="secondary" type="button">清空结果</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section" aria-labelledby="result-section-head">
+      <div class="section-head" id="result-section-head">
+        <div>
+          <div class="label">Result</div>
+          <h3>解析结果</h3>
+        </div>
+      </div>
+
+      <div id="result-toolbar" class="result-toolbar" hidden>
+        <div id="file-tabs" class="file-tabs" aria-label="Parsed files"></div>
+        <div class="view-tabs" aria-label="Result views">
+          <button class="view-tab active" type="button" data-view="markdown" aria-selected="true" aria-controls="markdown-view">Markdown 预览</button>
+          <button class="view-tab" type="button" data-view="json" aria-selected="false" aria-controls="json-view">JSON 调试</button>
+        </div>
+      </div>
+
+      <div class="result-viewport">
+        <div id="empty" class="empty">解析完成后，Markdown 预览、task_id、耗时会显示在这里。</div>
+
+        <div id="markdown-view" class="result-view">
+          <div class="result-actions">
+            <button id="download-markdown" class="secondary" type="button" disabled>下载 Markdown</button>
+            <button id="copy-markdown" class="secondary" type="button" disabled>复制 Markdown</button>
+          </div>
+          <div id="markdown-empty" class="empty compact">未生成 Markdown</div>
+          <pre id="markdown-output" class="markdown-output" hidden></pre>
+        </div>
+
+        <div id="json-view" class="result-view" hidden>
+          <div class="result-actions">
+            <button id="download-json" class="secondary" type="button" disabled>下载 JSON</button>
+            <button id="copy-json" class="secondary" type="button" disabled>复制 JSON</button>
+          </div>
+          <pre id="result-json" hidden></pre>
+        </div>
+      </div>
+    </section>
+      </div>
+    </section>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById("parse-form");
+    const filesInput = document.getElementById("files");
+    const dropzone = document.getElementById("file-dropzone");
+    const fileList = document.getElementById("file-list");
+    const submitButton = document.getElementById("submit");
+    const clearButton = document.getElementById("clear");
+    const statusBox = document.getElementById("status");
+    const emptyBox = document.getElementById("empty");
+    const summaryBox = document.getElementById("summary");
+    const resultJson = document.getElementById("result-json");
+    const downloadButton = document.getElementById("download-json");
+    const copyButton = document.getElementById("copy-json");
+    let latestPayload = null;
+    let selectedFiles = [];
+    let markdownResults = [];
+    let selectedResultIndex = 0;
+    let activeResultView = "markdown";
+    const ADMIN_TOKEN_KEY = "sga_admin_token";
+    const FORM_DEFAULTS_KEY = "sga_form_defaults";
+    const adminAuthBanner = document.getElementById("admin-auth-banner");
+    const adminTokenInput = document.getElementById("admin-token-input");
+    const verifyAdminButton = document.getElementById("verify-admin-token");
+    const adminAuthStatus = document.getElementById("admin-auth-status");
+    const adminConfigForm = document.getElementById("admin-config-form");
+    const adminLogoutButton = document.getElementById("admin-logout");
+    const cfgStatus = document.getElementById("cfg-status");
+    const cfgSaveButton = document.getElementById("cfg-save");
+    const cfgTestButton = document.getElementById("cfg-test");
+    const cfgResetButton = document.getElementById("cfg-reset-defaults");
+    const CONFIG_DEFAULTS = {
+      enrich_enabled: false,
+      enrich_images_enabled: false,
+      enrich_llm_base_url: "http://localhost:11434/v1",
+      enrich_llm_model: "qwen2.5:7b-instruct",
+      enrich_llm_api_key: "",
+      enrich_llm_timeout: 30,
+      enrich_llm_max_tokens: 15000,
+      enrich_vision_model_override: "",
+      enrich_vision_base_url_override: "",
+      enrich_vision_api_key_override: "",
+      enrich_vision_transport_mode: "auto"
+    };
+
+    document.querySelectorAll(".view-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeResultView = button.dataset.view || "markdown";
+        renderSelectedResult();
+      });
+    });
+
+    function setStatus(message, type) {
+      statusBox.className = "status" + (type ? " " + type : "");
+      statusBox.innerHTML = `<span>${message}</span>`;
+    }
+
+    function buildRequestJson() {
+      return {
+        agent_config: {
+          mode: document.getElementById("mode").value,
+          enable_image_extraction: document.getElementById("extract-images").checked,
+          image_dpi: Number(document.getElementById("image-dpi").value || 300),
+          enrich_metadata: document.getElementById("enrich-metadata").checked,
+          enrich_images: document.getElementById("enrich-images").checked
+        },
+        lang: document.getElementById("lang").value || "ch",
+        start_page: Number(document.getElementById("start-page").value || 0),
+        end_page: Number(document.getElementById("end-page").value || 99999)
+      };
+    }
+
+    function storageGet(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (exc) {
+        return null;
+      }
+    }
+
+    function storageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (exc) {
+        // localStorage can be disabled; the UI should still work for this session.
+      }
+    }
+
+    function storageRemove(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (exc) {
+        // localStorage can be disabled; no-op.
+      }
+    }
+
+    function setSegmentedValue(container, value) {
+      if (!container) return;
+      const nextValue = value || container.querySelector(".seg-btn")?.dataset.value || "";
+      container.dataset.value = nextValue;
+      container.querySelectorAll(".seg-btn").forEach((button) => {
+        const isActive = button.dataset.value === nextValue;
+        button.classList.toggle("active", isActive);
+        if (button.dataset.target) {
+          const target = document.getElementById(button.dataset.target);
+          if (target && isActive) target.value = nextValue;
+        }
+      });
+    }
+
+    function getSegmentedValue(id) {
+      const container = document.getElementById(id);
+      return container ? container.dataset.value || "" : "";
+    }
+
+    function initializeSegmentedControls() {
+      document.querySelectorAll(".segmented").forEach((container) => {
+        const active = container.querySelector(".seg-btn.active") || container.querySelector(".seg-btn");
+        setSegmentedValue(container, active ? active.dataset.value : "");
+      });
+      document.querySelectorAll(".segmented .seg-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          setSegmentedValue(button.closest(".segmented"), button.dataset.value);
+          saveFormDefaults();
+        });
+      });
+    }
+
+    const FORM_DEFAULT_IDS = [
+      "mode",
+      "lang",
+      "start-page",
+      "end-page",
+      "image-dpi",
+      "extract-images",
+      "enrich-metadata",
+      "enrich-images",
+      "public-base-url"
+    ];
+
+    function saveFormDefaults() {
+      const values = {};
+      for (const id of FORM_DEFAULT_IDS) {
+        const field = document.getElementById(id);
+        if (!field) continue;
+        values[id] = field.type === "checkbox" ? field.checked : field.value;
+      }
+      storageSet(FORM_DEFAULTS_KEY, JSON.stringify(values));
+    }
+
+    function restoreFormDefaults() {
+      const raw = storageGet(FORM_DEFAULTS_KEY);
+      if (!raw) return;
+      try {
+        const values = JSON.parse(raw);
+        for (const [id, value] of Object.entries(values)) {
+          const field = document.getElementById(id);
+          if (!field) continue;
+          if (field.type === "checkbox") {
+            field.checked = Boolean(value);
+          } else {
+            field.value = value;
+            if (field.tagName === "SELECT" && !field.value) {
+              field.value = field.querySelector("option")?.value || "";
+            }
+          }
+        }
+        setSegmentedValue(document.getElementById("mode-segmented"), document.getElementById("mode").value);
+      } catch (exc) {
+        storageRemove(FORM_DEFAULTS_KEY);
+      }
+    }
+
+    async function applyParseEnrichmentDefaults() {
+      try {
+        const response = await fetch("/settings/enrichment/defaults");
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) return;
+
+        const metadataField = document.getElementById("enrich-metadata");
+        const imagesField = document.getElementById("enrich-images");
+        let changed = false;
+
+        if (body.enrich_metadata_default && metadataField && !metadataField.checked) {
+          metadataField.checked = true;
+          changed = true;
+        }
+        if (body.enrich_images_default && imagesField && !imagesField.checked) {
+          imagesField.checked = true;
+          changed = true;
+        }
+        if (changed) saveFormDefaults();
+      } catch (exc) {
+        // Non-blocking: parsing still works if defaults cannot be loaded.
+      }
+    }
+
+    function bindFormDefaults() {
+      for (const id of FORM_DEFAULT_IDS) {
+        const field = document.getElementById(id);
+        if (!field) continue;
+        field.addEventListener("change", saveFormDefaults);
+        field.addEventListener("input", saveFormDefaults);
+      }
+    }
+
+    function errorMessageFromBody(body, fallback) {
+      const detail = body && body.detail;
+      if (typeof detail === "string") return detail;
+      if (detail && typeof detail === "object") {
+        if (detail.message) return detail.message;
+        if (detail.error) return detail.error;
+      }
+      return fallback;
+    }
+
+    function setAdminAuthStatus(text, level) {
+      adminAuthStatus.textContent = text || "";
+      adminAuthStatus.style.color = level === "error" ? "var(--error)" : "var(--muted)";
+    }
+
+    function setConfigStatus(text, level) {
+      cfgStatus.textContent = text || "";
+      cfgStatus.style.color = level === "error" ? "var(--error)" : "var(--muted)";
+    }
+
+    function currentAdminToken() {
+      return storageGet(ADMIN_TOKEN_KEY) || "";
+    }
+
+    function showAdminAuth() {
+      adminAuthBanner.hidden = false;
+      adminConfigForm.hidden = true;
+    }
+
+    function showAdminConfig() {
+      adminAuthBanner.hidden = true;
+      adminConfigForm.hidden = false;
+    }
+
+    async function fetchEnrichmentSettings(token) {
+      const response = await fetch("/settings/enrichment", {
+        headers: { "X-Admin-Token": token }
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessageFromBody(body, "HTTP " + response.status));
+      }
+      return body;
+    }
+
+    async function putEnrichmentSettings(token, payload) {
+      const response = await fetch("/settings/enrichment", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Token": token
+        },
+        body: JSON.stringify(payload)
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessageFromBody(body, "HTTP " + response.status));
+      }
+      return body;
+    }
+
+    function populateEnrichmentFields(body) {
+      const effective = body.effective || {};
+      document.getElementById("cfg-enrich-enabled").checked = Boolean(effective.enrich_enabled);
+      document.getElementById("cfg-images-enabled").checked = Boolean(effective.enrich_images_enabled);
+      document.getElementById("cfg-base-url").value = effective.enrich_llm_base_url || "";
+      document.getElementById("cfg-model").value = effective.enrich_llm_model || "";
+      document.getElementById("cfg-api-key").value = effective.enrich_llm_api_key || "";
+      document.getElementById("cfg-timeout").value = effective.enrich_llm_timeout ?? "";
+      document.getElementById("cfg-max-tokens").value = effective.enrich_llm_max_tokens ?? "";
+      document.getElementById("cfg-vision-model").value = effective.enrich_vision_model_override || "";
+      document.getElementById("cfg-vision-base-url").value = effective.enrich_vision_base_url_override || "";
+      document.getElementById("cfg-vision-api-key").value = effective.enrich_vision_api_key_override || "";
+      setSegmentedValue(document.getElementById("cfg-transport-mode"), effective.enrich_vision_transport_mode || "auto");
+
+      const sources = body.sources || {};
+      const sourcePairs = [
+        ["enabled", sources.enrich_enabled],
+        ["images", sources.enrich_images_enabled],
+        ["base_url", sources.enrich_llm_base_url],
+        ["model", sources.enrich_llm_model],
+        ["api_key", sources.enrich_llm_api_key],
+        ["timeout", sources.enrich_llm_timeout],
+        ["max_tokens", sources.enrich_llm_max_tokens],
+        ["vision_model", sources.enrich_vision_model_override],
+        ["transport", sources.enrich_vision_transport_mode]
+      ].filter((pair) => pair[1]);
+      document.getElementById("cfg-sources").textContent = sourcePairs.length
+        ? "Sources: " + sourcePairs.map(([key, value]) => `${key}=${value}`).join(", ")
+        : "";
+    }
+
+    async function verifyAdminToken(token, fromStorage) {
+      if (!token) {
+        showAdminAuth();
+        if (!fromStorage) setAdminAuthStatus("请输入 Admin Token。", "error");
+        return;
+      }
+      try {
+        const body = await fetchEnrichmentSettings(token);
+        storageSet(ADMIN_TOKEN_KEY, token);
+        adminTokenInput.value = "";
+        populateEnrichmentFields(body);
+        showAdminConfig();
+        setAdminAuthStatus("");
+        setConfigStatus("配置已加载。", "");
+      } catch (exc) {
+        storageRemove(ADMIN_TOKEN_KEY);
+        showAdminAuth();
+        setAdminAuthStatus("认证失败：" + exc.message, "error");
+      }
+    }
+
+    function isMaskedSecret(value) {
+      return /^[^*]*\*+[^*]*$/.test(value);
+    }
+
+    function numberOrNull(id) {
+      const value = document.getElementById(id).value;
+      return value === "" ? null : Number(value);
+    }
+
+    function buildEnrichmentSettingsPayload() {
+      const payload = {
+        enrich_enabled: document.getElementById("cfg-enrich-enabled").checked,
+        enrich_images_enabled: document.getElementById("cfg-images-enabled").checked,
+        enrich_llm_base_url: document.getElementById("cfg-base-url").value.trim(),
+        enrich_llm_model: document.getElementById("cfg-model").value.trim(),
+        enrich_llm_timeout: numberOrNull("cfg-timeout"),
+        enrich_llm_max_tokens: numberOrNull("cfg-max-tokens"),
+        enrich_vision_model_override: document.getElementById("cfg-vision-model").value.trim(),
+        enrich_vision_base_url_override: document.getElementById("cfg-vision-base-url").value.trim(),
+        enrich_vision_transport_mode: getSegmentedValue("cfg-transport-mode") || "auto"
+      };
+
+      const apiKey = document.getElementById("cfg-api-key").value.trim();
+      if (!isMaskedSecret(apiKey)) {
+        payload.enrich_llm_api_key = apiKey;
+      }
+
+      const visionApiKey = document.getElementById("cfg-vision-api-key").value.trim();
+      if (!isMaskedSecret(visionApiKey)) {
+        payload.enrich_vision_api_key_override = visionApiKey;
+      }
+
+      for (const key of Object.keys(payload)) {
+        if (payload[key] === null) delete payload[key];
+      }
+
+      return payload;
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function updateFileList(files) {
+      selectedFiles = Array.from(files || []);
+      if (!selectedFiles.length) {
+        fileList.textContent = "尚未选择文件";
+        return;
+      }
+      const rows = selectedFiles
+        .map((file) => `<div><strong>${escapeHtml(file.name)}</strong> · ${formatBytes(file.size)}</div>`)
+        .join("");
+      fileList.innerHTML = `<div>已选择 ${selectedFiles.length} 个文件</div>${rows}`;
+    }
+
+    function extractMarkdownResults(parsePayload) {
+      const results = parsePayload && parsePayload.results ? parsePayload.results : {};
+      return Object.entries(results).map(([fileName, result]) => {
+        if (typeof result.hiagent_markdown === "string" && result.hiagent_markdown.trim()) {
+          return {
+            fileName,
+            markdown: result.hiagent_markdown,
+            source: "hiagent_markdown",
+            pageCount: result.page_count || 0,
+            rawResult: result
+          };
+        }
+
+        const enrichedPages = Array.isArray(result.enriched_pages) ? result.enriched_pages : [];
+        const pageMarkdown = enrichedPages
+          .map((page) => typeof page.content_markdown === "string" ? page.content_markdown.trim() : "")
+          .filter(Boolean);
+
+        if (pageMarkdown.length) {
+          return {
+            fileName,
+            markdown: pageMarkdown.join("\n\n---\n\n"),
+            source: "enriched_pages",
+            pageCount: pageMarkdown.length,
+            rawResult: result
+          };
+        }
+
+        if (typeof result.markdown === "string" && result.markdown.trim()) {
+          return {
+            fileName,
+            markdown: result.markdown,
+            source: "markdown",
+            pageCount: result.page_count || 0,
+            rawResult: result
+          };
+        }
+
+        return {
+          fileName,
+          markdown: "",
+          source: "missing",
+          pageCount: result.page_count || 0,
+          rawResult: result
+        };
+      });
+    }
+
+    function markdownDownloadName(fileName) {
+      const baseName = String(fileName || "octopus-kb-result")
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^A-Za-z0-9._-]+/g, "_") || "octopus-kb-result";
+      return `${baseName}.md`;
+    }
+
+    function downloadTextFile(fileName, text, mimeType) {
+      const blob = new Blob([text], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderFileTabs() {
+      const fileTabs = document.getElementById("file-tabs");
+      fileTabs.innerHTML = "";
+      markdownResults.forEach((item, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "file-tab" + (index === selectedResultIndex ? " active" : "");
+        button.textContent = item.fileName;
+        button.title = item.fileName;
+        button.addEventListener("click", () => {
+          selectedResultIndex = index;
+          renderSelectedResult();
+        });
+        fileTabs.appendChild(button);
+      });
+    }
+
+    function renderSelectedResult() {
+      renderFileTabs();
+      const current = markdownResults[selectedResultIndex];
+      const markdownOutput = document.getElementById("markdown-output");
+      const markdownEmpty = document.getElementById("markdown-empty");
+      const downloadMarkdown = document.getElementById("download-markdown");
+      const copyMarkdown = document.getElementById("copy-markdown");
+
+      const hasMarkdown = Boolean(current && current.markdown);
+      markdownOutput.hidden = !hasMarkdown;
+      markdownEmpty.hidden = hasMarkdown;
+      markdownOutput.textContent = hasMarkdown ? current.markdown : "";
+      downloadMarkdown.disabled = !hasMarkdown;
+      copyMarkdown.disabled = !hasMarkdown;
+
+      document.getElementById("markdown-view").hidden = activeResultView !== "markdown";
+      document.getElementById("json-view").hidden = activeResultView !== "json";
+      document.querySelectorAll(".view-tab").forEach((button) => {
+        const isActive = button.dataset.view === activeResultView;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+    }
+
+    function renderResult(payload) {
+      latestPayload = payload;
+      markdownResults = extractMarkdownResults(payload);
+      selectedResultIndex = 0;
+      activeResultView = "markdown";
+
+      emptyBox.hidden = true;
+      summaryBox.hidden = false;
+      document.getElementById("result-toolbar").hidden = false;
+      document.getElementById("markdown-view").hidden = false;
+      document.getElementById("json-view").hidden = true;
+      resultJson.hidden = false;
+      downloadButton.disabled = false;
+      copyButton.disabled = false;
+      document.getElementById("download-markdown").disabled = true;
+      document.getElementById("copy-markdown").disabled = true;
+
+      document.getElementById("task-id").textContent = payload.task_id || "-";
+      document.getElementById("task-status").textContent = payload.status || "-";
+      const seconds = typeof payload.processing_time === "number" ? `${payload.processing_time.toFixed(2)}s` : "-";
+      document.getElementById("processing-time").textContent = seconds;
+      resultJson.textContent = JSON.stringify(payload, null, 2);
+      renderSelectedResult();
+    }
+
+    function resetResult() {
+      latestPayload = null;
+      markdownResults = [];
+      selectedResultIndex = 0;
+      activeResultView = "markdown";
+      emptyBox.hidden = false;
+      summaryBox.hidden = true;
+      document.getElementById("result-toolbar").hidden = true;
+      document.getElementById("markdown-view").hidden = false;
+      document.getElementById("markdown-empty").hidden = false;
+      document.getElementById("markdown-output").hidden = true;
+      document.getElementById("json-view").hidden = true;
+      resultJson.hidden = true;
+      downloadButton.disabled = true;
+      copyButton.disabled = true;
+      document.getElementById("download-markdown").disabled = true;
+      document.getElementById("copy-markdown").disabled = true;
+      resultJson.textContent = "";
+      document.getElementById("markdown-output").textContent = "";
+      setStatus("等待上传", "");
+      renderSelectedResult();
+    }
+
+    filesInput.addEventListener("change", () => {
+      updateFileList(filesInput.files);
+    });
+
+    dropzone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        filesInput.click();
+      }
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("dragover");
+      });
+    });
+
+    dropzone.addEventListener("drop", (event) => {
+      const droppedFiles = Array.from(event.dataTransfer.files || []);
+      if (!droppedFiles.length) return;
+      updateFileList(droppedFiles);
+      if (window.DataTransfer) {
+        const transfer = new DataTransfer();
+        for (const file of droppedFiles) {
+          transfer.items.add(file);
+        }
+        filesInput.files = transfer.files;
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const files = selectedFiles;
+      if (!files.length) {
+        setStatus("请选择至少一个文件。", "error");
+        return;
+      }
+
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      formData.append("request_json", JSON.stringify(buildRequestJson()));
+
+      submitButton.disabled = true;
+      setStatus(`处理中... ${files.length} file(s)`, "working");
+
+      try {
+        const response = await fetch("/parse", { method: "POST", body: formData });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.detail || `HTTP ${response.status}`);
+        }
+        setStatus("解析完成", "success");
+        renderResult(payload);
+      } catch (error) {
+        setStatus(`解析失败：${error.message}`, "error");
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    clearButton.addEventListener("click", resetResult);
+
+    document.getElementById("download-markdown").addEventListener("click", () => {
+      const current = markdownResults[selectedResultIndex];
+      if (!current || !current.markdown) return;
+      downloadTextFile(markdownDownloadName(current.fileName), current.markdown, "text/markdown;charset=utf-8");
+    });
+
+    document.getElementById("copy-markdown").addEventListener("click", async () => {
+      const current = markdownResults[selectedResultIndex];
+      if (!current || !current.markdown) return;
+      await navigator.clipboard.writeText(current.markdown);
+      setStatus("Markdown 已复制", "success");
+    });
+
+    downloadButton.addEventListener("click", () => {
+      if (!latestPayload) return;
+      downloadTextFile(
+        `${latestPayload.task_id || "octopus-kb-result"}.json`,
+        JSON.stringify(latestPayload, null, 2),
+        "application/json"
+      );
+    });
+
+    copyButton.addEventListener("click", async () => {
+      if (!latestPayload) return;
+      await navigator.clipboard.writeText(JSON.stringify(latestPayload, null, 2));
+      setStatus("结果 JSON 已复制", "success");
+    });
+
+    const assetUrlInput = document.getElementById("public-base-url");
+    const assetUrlStatus = document.getElementById("asset-url-status");
+    const saveAssetUrlButton = document.getElementById("save-asset-url");
+
+    function setAssetUrlStatus(text, level) {
+      assetUrlStatus.textContent = text || "";
+      assetUrlStatus.className = "hint asset-url-status" + (level ? " " + level : "");
+    }
+
+    async function loadAssetUrlConfig() {
+      try {
+        const response = await fetch("/settings/asset-url");
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const body = await response.json();
+        const eff = body.effective_config || {};
+        const envOverrides = body.env_overrides || {};
+        assetUrlInput.value = eff.public_base_url || "";
+        if (envOverrides.public_base_url) {
+          setAssetUrlStatus("当前值由环境变量 API_BASE_URL 锁定，UI 修改不会生效。", "error");
+        } else {
+          setAssetUrlStatus("");
+        }
+      } catch (exc) {
+        setAssetUrlStatus("加载配置失败：" + exc.message, "error");
+      }
+    }
+
+    saveAssetUrlButton.addEventListener("click", async () => {
+      const newValue = assetUrlInput.value.trim();
+      saveAssetUrlButton.disabled = true;
+      setAssetUrlStatus("保存中...", "");
+      try {
+        const response = await fetch("/settings/asset-url", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ public_base_url: newValue || null })
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || ("HTTP " + response.status));
+        const effectiveValue = (body.effective_config && body.effective_config.public_base_url) || "";
+        if (newValue && effectiveValue !== newValue) {
+          setAssetUrlStatus(`保存成功，但环境变量 API_BASE_URL 仍在覆盖该字段。当前生效值：${effectiveValue || "(空)"}`, "error");
+        } else {
+          setAssetUrlStatus(`保存成功。当前生效值：${effectiveValue || "(空)"}`, "success");
+        }
+      } catch (exc) {
+        setAssetUrlStatus("保存失败：" + exc.message, "error");
+      } finally {
+        saveAssetUrlButton.disabled = false;
+      }
+    });
+
+    verifyAdminButton.addEventListener("click", async () => {
+      setAdminAuthStatus("验证中...", "");
+      await verifyAdminToken(adminTokenInput.value.trim(), false);
+    });
+
+    adminTokenInput.addEventListener("keydown", async (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      setAdminAuthStatus("验证中...", "");
+      await verifyAdminToken(adminTokenInput.value.trim(), false);
+    });
+
+    adminLogoutButton.addEventListener("click", () => {
+      storageRemove(ADMIN_TOKEN_KEY);
+      setConfigStatus("");
+      setAdminAuthStatus("已退出。", "");
+      showAdminAuth();
+    });
+
+    cfgSaveButton.addEventListener("click", async () => {
+      const token = currentAdminToken();
+      if (!token) {
+        showAdminAuth();
+        setAdminAuthStatus("请先验证 Admin Token。", "error");
+        return;
+      }
+      cfgSaveButton.disabled = true;
+      setConfigStatus("保存中...", "");
+      try {
+        const body = await putEnrichmentSettings(token, buildEnrichmentSettingsPayload());
+        populateEnrichmentFields(body);
+        setConfigStatus("✓ 保存成功", "");
+      } catch (exc) {
+        setConfigStatus("保存失败：" + exc.message, "error");
+      } finally {
+        cfgSaveButton.disabled = false;
+      }
+    });
+
+    cfgTestButton.addEventListener("click", async () => {
+      const token = currentAdminToken();
+      if (!token) {
+        showAdminAuth();
+        setAdminAuthStatus("请先验证 Admin Token。", "error");
+        return;
+      }
+      cfgTestButton.disabled = true;
+      setConfigStatus("测试中...", "");
+      try {
+        const response = await fetch("/settings/enrichment/test", {
+          method: "POST",
+          headers: { "X-Admin-Token": token }
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(errorMessageFromBody(body, "HTTP " + response.status));
+        const latency = typeof body.latency_ms === "number" ? `${body.latency_ms}ms` : "-";
+        if (body.ok) {
+          setConfigStatus(`连通性 OK · ${body.model || "-"} · ${latency}`, "");
+        } else {
+          setConfigStatus(`连通性失败：${body.error_type || "unknown"} · ${body.error || ""}`, "error");
+        }
+      } catch (exc) {
+        setConfigStatus("测试失败：" + exc.message, "error");
+      } finally {
+        cfgTestButton.disabled = false;
+      }
+    });
+
+    cfgResetButton.addEventListener("click", async () => {
+      const token = currentAdminToken();
+      if (!token) {
+        showAdminAuth();
+        setAdminAuthStatus("请先验证 Admin Token。", "error");
+        return;
+      }
+      cfgResetButton.disabled = true;
+      setConfigStatus("恢复中...", "");
+      const clearPayload = Object.fromEntries(Object.keys(CONFIG_DEFAULTS).map((key) => [key, null]));
+      try {
+        let body;
+        try {
+          body = await putEnrichmentSettings(token, clearPayload);
+        } catch (exc) {
+          body = await putEnrichmentSettings(token, CONFIG_DEFAULTS);
+        }
+        populateEnrichmentFields(body);
+        setConfigStatus("已恢复默认配置。", "");
+      } catch (exc) {
+        setConfigStatus("恢复失败：" + exc.message, "error");
+      } finally {
+        cfgResetButton.disabled = false;
+      }
+    });
+
+    initializeSegmentedControls();
+    restoreFormDefaults();
+    applyParseEnrichmentDefaults();
+    bindFormDefaults();
+    loadAssetUrlConfig();
+    verifyAdminToken(currentAdminToken(), true);
+    renderSelectedResult();
+  </script>
+</body>
+</html>

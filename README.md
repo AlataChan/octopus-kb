@@ -1,5 +1,9 @@
 # octopus-kb
 
+<p align="center">
+  <img src="docs/ui/assets/octopus-praser-icon-1024.png" alt="octopus-kb logo" width="112" height="112" />
+</p>
+
 > The agent's operating procedure for Obsidian-style knowledge bases.
 
 Instead of letting agents grep your vault, octopus-kb returns **decisions**: canonical identity, ordered evidence bundles, graph context, impact plans, and rule-gated LLM-assisted maintenance.
