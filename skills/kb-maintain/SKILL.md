@@ -13,12 +13,16 @@ Maintain the wiki as a living artifact. Every change should improve structure, e
 
 1. Read the schema before changing pages.
 2. Inspect the index and affected concept pages.
-3. Ingest the new source or maintenance request.
-4. Plan impacted pages before editing.
+3. Ingest the new source or maintenance request. Acquire new sources with `kb-ingest` first.
+4. Plan impacted pages before editing: `octopus-kb impacted-pages "{page_path}" --vault . --json`, then `octopus-kb plan-maintenance "{page_path}" --vault .`.
 5. Update frontmatter, summaries, wikilinks, and index/log entries together.
-6. Run lint to catch broken links, orphans, and missing metadata.
+6. Run `octopus-kb lint . --json` to catch broken links, orphans, and missing metadata.
 
-When available, use `octopus_kb_compound.planner.plan_maintenance()` or the `plan-maintenance` CLI command before editing pages. Treat the plan as guidance; it should not mutate the vault by itself.
+`plan-maintenance` does not mutate the vault; treat its output as guidance.
+
+To turn a raw source into wiki changes through the rule gate, run `octopus-kb propose raw/<file> --vault . --json`, then `octopus-kb validate .octopus-kb/proposals/<id>.json --vault . --apply --json`. Without `--apply`, `validate` is not a pure dry run: a reject verdict is written to `.octopus-kb/rejections/` and a defer verdict to `.octopus-kb/inbox/`.
+
+For health checks, use `octopus-kb vault-summary .` and `octopus-kb validate-frontmatter <path> --json`.
 
 ## Rules
 

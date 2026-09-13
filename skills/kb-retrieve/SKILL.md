@@ -15,17 +15,18 @@ The goal is not generic RAG. The goal is to reuse the persistent wiki first, the
 
 ## Workflow
 
-1. Read the schema page first and inherit its conventions.
-2. Read the index to locate likely concept pages and recent changes.
-3. Read the smallest set of concept pages that can answer the question.
-4. Read raw sources only to verify claims, resolve conflicts, or gather direct evidence.
-5. Answer in four parts:
+1. Before any Grep or Read on `wiki/` or `raw/`, run `octopus-kb retrieve-bundle "{question}" --vault . --json`. It returns the ordered page set: schema, index, concepts, entities, raw sources.
+2. Read the schema page first and inherit its conventions.
+3. Read the index to locate likely concept pages and recent changes.
+4. Read the smallest set of concept pages that can answer the question. Resolve ambiguous terms with `octopus-kb lookup "{term}" --vault . --json`; follow a page's links with `octopus-kb neighbors "{page_path}" --vault . --json`.
+5. Read raw sources only to verify claims, resolve conflicts, or gather direct evidence.
+6. Answer in four parts:
    - conclusion
    - evidence
    - synthesis
    - open gaps
 
-When available, use `octopus_kb_compound.retrieve.build_retrieval_bundle()` to produce the ordered schema, index, concept, entity, and raw-source page set before reading files manually.
+From Python, the same bundle comes from `octopus_kb_compound.retrieve.build_retrieval_bundle(vault, query)`.
 
 ## Rules
 

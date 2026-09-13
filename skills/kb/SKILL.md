@@ -30,6 +30,7 @@ description: Operating procedure for octopus-kb knowledge bases. Use this skill 
 
 7. At least weekly, triage deferred proposals:
    `octopus-kb inbox --vault . --list --json`
+   `octopus-kb inbox --vault . --review <id> [--accept | --reject --reason "..."] --json`
 
 8. If a `validate --apply` run is interrupted, recover before retrying:
    `octopus-kb recover <proposal_id> --vault .`
