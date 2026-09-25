@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "octopus-kb-mcp"
+version = "0.1.0"
+description = "stdio MCP wrapper for octopus-kb"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.0",
+  "octopus-kb",
+]
+
+[project.scripts]
+octopus-kb-mcp = "octopus_kb_mcp.cli:main"
+
+[tool.uv.sources]
+octopus-kb = { path = "..", editable = true }
+
+[tool.pytest.ini_options]
+pythonpath = [".", "../src"]
+testpaths = ["tests"]
