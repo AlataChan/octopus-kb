@@ -96,19 +96,42 @@ def read_pointers(root: Path) -> dict[str, str]:
     return found
 
 
+def activation_prefix(data: bytes) -> bytes:
+    """Complete newline-terminated JSON records. An incomplete tail is dropped.
+
+    The tail may be a partial UTF-8 sequence. It is never decoded as text.
+    """
+    if not data:
+        return b""
+    if not data.endswith(b"\n"):
+        cut = data.rfind(b"\n")
+        data = data[: cut + 1] if cut >= 0 else b""
+    while data.endswith(b"\n"):
+        previous = data.rfind(b"\n", 0, -1)
+        line = data[previous + 1 : -1]
+        if not line.strip():
+            return data
+        try:
+            json.loads(line.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            data = data[: previous + 1] if previous >= 0 else b""
+            continue
+        return data
+    return data
+
+
 def matching_record(root: Path, logical_id: str, revision_id: str) -> dict | None:
     path = root / ".octopus-kb" / "activations" / f"{logical_id}.jsonl"
     if not path.is_file():
         return None
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
+    lines = activation_prefix(path.read_bytes()).splitlines()
     match = None
-    for index, line in enumerate(lines):
-        if not line.strip():
+    for index, raw in enumerate(lines):
+        if not raw.strip():
             continue
         try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
+            record = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
             if index == len(lines) - 1:
                 break
             raise

@@ -29,6 +29,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
+from octopus_kb_compound.active import activation_prefix
 from octopus_kb_compound.approvals import (
     load_approval_keys,
     logical_document_id,
@@ -390,6 +391,10 @@ def _write_fsync(path: Path, payload: bytes, event: str) -> None:
 
 
 def _append_fsync(path: Path, payload: bytes, event: str) -> None:
+    existing = path.read_bytes() if path.is_file() else b""
+    prefix = activation_prefix(existing)
+    if prefix != existing:
+        _write_fsync(path, prefix, "activation-repair")
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
     try:
         _write_all(fd, payload)
