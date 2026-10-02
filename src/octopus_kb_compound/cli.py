@@ -12,6 +12,7 @@ from octopus_kb_compound.apply import (
     validate_proposal_file,
 )
 from octopus_kb_compound import ingest
+from octopus_kb_compound.envelope import ingest_envelope
 from octopus_kb_compound.export import export_graph_artifacts
 from octopus_kb_compound.frontmatter import FrontmatterError, parse_document
 from octopus_kb_compound.impact import find_impacted_pages
@@ -59,6 +60,15 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_parser.add_argument("--vault", required=True, type=Path)
     ingest_parser.add_argument("--tags", default="")
     ingest_parser.add_argument("--lang", default="zh")
+
+    envelope_parser = subparsers.add_parser(
+        "ingest-envelope",
+        help="Stage a delivery envelope and activate it when the revision is complete.",
+    )
+    envelope_parser.add_argument("--vault-id", required=True)
+    envelope_parser.add_argument("--manifest", required=True, type=Path)
+    envelope_parser.add_argument("--parts", required=True, type=Path)
+    envelope_parser.add_argument("--approval", type=Path)
 
     ingest_file_parser = subparsers.add_parser("ingest-file", help="Convert a local file and write it into raw/ as a markdown source.")
     ingest_file_parser.add_argument("path", type=Path)
@@ -245,6 +255,14 @@ def _main(argv: list[str] | None = None) -> int:
             return 2
 
         print(output_path)
+        return 0
+
+    if args.command == "ingest-envelope":
+        manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+        parts = json.loads(args.parts.read_text(encoding="utf-8"))
+        approval = json.loads(args.approval.read_text(encoding="utf-8")) if args.approval else None
+        result = ingest_envelope(args.vault_id, manifest, parts, approval)
+        print(json.dumps(result, ensure_ascii=False))
         return 0
 
     if args.command == "vault-summary":

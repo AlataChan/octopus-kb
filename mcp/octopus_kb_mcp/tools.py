@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from octopus_kb_compound.apply import validate_proposal_file
+from octopus_kb_compound.envelope import ingest_envelope as _ingest_envelope
 from octopus_kb_compound.export import _edges, _nodes
 from octopus_kb_compound.ingest import generate_raw_page
 from octopus_kb_compound.links import build_alias_index
@@ -85,6 +86,15 @@ def ingest(
         tags=tags or [],
     )
     return {"path": path.relative_to(root).as_posix()}
+
+
+def ingest_envelope(
+    vault_id: str,
+    manifest: dict,
+    parts: list[dict],
+    approval: dict | None = None,
+) -> dict[str, Any]:
+    return _ingest_envelope(vault_id, manifest, parts, approval)
 
 
 def neighbors(vault: str | Path, page: str) -> dict[str, Any]:

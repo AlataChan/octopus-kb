@@ -53,6 +53,7 @@ def test_mcp_tool_names_and_signatures_match_the_snapshot():
         "kb_export_graph",
         "kb_retrieve_bundle",
         "kb_ingest",
+        "kb_ingest_envelope",
         "kb_neighbors",
         "kb_lookup",
         "kb_propose",
