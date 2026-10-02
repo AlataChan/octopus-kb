@@ -100,11 +100,18 @@ def matching_record(root: Path, logical_id: str, revision_id: str) -> dict | Non
     path = root / ".octopus-kb" / "activations" / f"{logical_id}.jsonl"
     if not path.is_file():
         return None
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
     match = None
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for index, line in enumerate(lines):
         if not line.strip():
             continue
-        record = json.loads(line)
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            if index == len(lines) - 1:
+                break
+            raise
         if record.get("revision_id") == revision_id:
             match = record
     return match

@@ -309,6 +309,7 @@ def _commit(root: Path, manifest: dict, approval: dict, now: datetime) -> None:
     record_path = root / ".octopus-kb" / "activations" / f"{logical}.jsonl"
     record_path.parent.mkdir(parents=True, exist_ok=True)
     _append_fsync(record_path, canonical_bytes(record) + b"\n", "activation-record")
+    _fsync_dir(record_path.parent, "activation-dir")
     _checkpoint("before_pointer")
 
     active_dir = root / ".octopus-kb" / "active"
@@ -381,7 +382,7 @@ def _write_fsync(path: Path, payload: bytes, event: str) -> None:
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     fd = os.open(path, flags, 0o644)
     try:
-        os.write(fd, payload)
+        _write_all(fd, payload)
         os.fsync(fd)
     finally:
         os.close(fd)
@@ -391,7 +392,7 @@ def _write_fsync(path: Path, payload: bytes, event: str) -> None:
 def _append_fsync(path: Path, payload: bytes, event: str) -> None:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
     try:
-        os.write(fd, payload)
+        _write_all(fd, payload)
         os.fsync(fd)
     finally:
         os.close(fd)
