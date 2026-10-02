@@ -390,7 +390,13 @@ def _controlled_send(
         exceeded = budget.reserve(reservation)
         if exceeded is not None:
             if last_error is not None:
-                raise last_error
+                _defer(
+                    vault,
+                    "budget_exhausted",
+                    measured + output_allowance,
+                    source_path,
+                    diagnostic=str(last_error),
+                )
             reason = "oversized_prompt" if exceeded in {"input_tokens", "output_tokens", "images"} else "budget_exhausted"
             _defer(vault, reason, measured + output_allowance, source_path)
         try:
@@ -474,7 +480,13 @@ def _observed_usage(response, reserved: Reservation) -> Reservation | None:
     )
 
 
-def _defer(vault: Path, reason: str, measured_size: int, source_path: str) -> None:
+def _defer(
+    vault: Path,
+    reason: str,
+    measured_size: int,
+    source_path: str,
+    diagnostic: str | None = None,
+) -> None:
     directory = vault / ".octopus-kb" / "inbox"
     directory.mkdir(parents=True, exist_ok=True)
     proposal_id = "deferred-" + uuid.uuid4().hex[:16]
@@ -487,6 +499,8 @@ def _defer(vault: Path, reason: str, measured_size: int, source_path: str) -> No
         "source": {"kind": "propose", "path": source_path},
         "status": "deferred",
     }
+    if diagnostic:
+        payload["diagnostic"] = diagnostic
     target = directory / f"{proposal_id}.json"
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     raise ProposeDeferred(reason, measured_size, target.relative_to(vault).as_posix())

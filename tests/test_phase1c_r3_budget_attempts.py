@@ -7,7 +7,7 @@ import json
 import pytest
 
 from octopus_kb_compound.controls import RunBudget
-from octopus_kb_compound.propose import ProposeDeferred, ProposeRuntimeError, propose_from_raw
+from octopus_kb_compound.propose import ProposeDeferred, propose_from_raw
 
 from tests.test_phase1c_controls import _proposal, _vault, _wide_budget
 
@@ -71,6 +71,12 @@ def _ok(proposal_id: str, usage: dict | None) -> dict:
     return payload
 
 
+def _inbox(vault) -> dict:
+    files = list((vault / ".octopus-kb" / "inbox").glob("*.json"))
+    assert len(files) == 1
+    return json.loads(files[0].read_text(encoding="utf-8"))
+
+
 def test_calls_limit_one_starts_at_zero_and_does_not_retry(tmp_path, monkeypatch):
     _allow_default_endpoint(monkeypatch)
     vault, raw = _vault(tmp_path)
@@ -84,8 +90,10 @@ def test_calls_limit_one_starts_at_zero_and_does_not_retry(tmp_path, monkeypatch
         ],
         budget,
     )
-    with pytest.raises(ProposeRuntimeError):
+    with pytest.raises(ProposeDeferred) as caught:
         propose_from_raw(raw, vault)
+    assert caught.value.reason == "budget_exhausted"
+    assert _inbox(vault)["diagnostic"] == "slow"
     assert len(calls) == 1
     assert budget.used.calls == 1
 
@@ -98,15 +106,38 @@ def test_retry_stops_when_the_call_budget_is_spent(tmp_path, monkeypatch):
         monkeypatch,
         [
             (429, {"error": {"message": "slow"}}),
-            (429, {"error": {"message": "slow"}}),
+            (429, {"error": {"message": "still-slow"}}),
             (200, _ok("late-success", {"prompt_tokens": 10, "completion_tokens": 1})),
         ],
         budget,
     )
-    with pytest.raises(ProposeRuntimeError):
+    with pytest.raises(ProposeDeferred) as caught:
         propose_from_raw(raw, vault)
+    assert caught.value.reason == "budget_exhausted"
+    assert _inbox(vault)["reason"] == "budget_exhausted"
+    assert _inbox(vault)["diagnostic"] == "still-slow"
     assert len(calls) == 2
     assert budget.used.calls == 2
+
+
+def test_token_exhaustion_after_a_retry_defers_budget_exhausted(tmp_path, monkeypatch):
+    _allow_default_endpoint(monkeypatch)
+    vault, raw = _vault(tmp_path)
+    budget = RunBudget("kb.propose", _limits(calls=8, output_tokens=4000))
+    calls = _script(
+        monkeypatch,
+        [
+            (429, {"error": {"message": "token-wait"}}),
+            (200, _ok("should-not-run", {"prompt_tokens": 10, "completion_tokens": 1})),
+        ],
+        budget,
+    )
+    with pytest.raises(ProposeDeferred) as caught:
+        propose_from_raw(raw, vault)
+    assert caught.value.reason == "budget_exhausted"
+    assert _inbox(vault)["diagnostic"] == "token-wait"
+    assert len(calls) == 1
+    assert budget.used.output_tokens == 4000
 
 
 def test_provider_overrun_is_settled_and_blocks_the_next_send(tmp_path, monkeypatch):
