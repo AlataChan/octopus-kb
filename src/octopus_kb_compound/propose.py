@@ -469,13 +469,13 @@ def _bind_request(
 
 
 def _observed_usage(response, reserved: Reservation) -> Reservation | None:
-    """Provider token counts, or None when the response did not report usage."""
+    """Provider token counts. An unknown dimension keeps its reservation."""
     if response.input_tokens is None and response.output_tokens is None:
         return None
     return Reservation(
         calls=1,
-        input_tokens=int(response.input_tokens or 0),
-        output_tokens=int(response.output_tokens or 0),
+        input_tokens=reserved.input_tokens if response.input_tokens is None else int(response.input_tokens),
+        output_tokens=reserved.output_tokens if response.output_tokens is None else int(response.output_tokens),
         images=reserved.images,
     )
 
