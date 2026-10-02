@@ -187,7 +187,7 @@ def _stage(root: Path, logical: str, revision: str, part: dict) -> None:
     payload = canonical_bytes(part) + b"\n"
     if target.is_file() and _stage_is_complete(target, digest, payload):
         return
-    target.parent.mkdir(parents=True, exist_ok=True)
+    _mkdir_durable(target.parent)
     _publish_bytes(target, payload)
 
 
@@ -268,7 +268,7 @@ def _commit(root: Path, manifest: dict, approval: dict, now: datetime) -> None:
     revision = manifest["revision_id"]
     logical = manifest["logical_document_id"]
     revision_dir = root / ".octopus-kb" / "revisions" / revision
-    revision_dir.mkdir(parents=True, exist_ok=True)
+    _mkdir_durable(revision_dir)
     staged = {part["index"]: part for part in _staged_parts(root, logical, revision, )}
     bindings_parts = []
     for spec in manifest["parts"]:
@@ -308,13 +308,13 @@ def _commit(root: Path, manifest: dict, approval: dict, now: datetime) -> None:
         "vault_id": manifest["vault_id"],
     }
     record_path = root / ".octopus-kb" / "activations" / f"{logical}.jsonl"
-    record_path.parent.mkdir(parents=True, exist_ok=True)
+    _mkdir_durable(record_path.parent)
     _append_fsync(record_path, canonical_bytes(record) + b"\n", "activation-record")
     _fsync_dir(record_path.parent, "activation-dir")
     _checkpoint("before_pointer")
 
     active_dir = root / ".octopus-kb" / "active"
-    active_dir.mkdir(parents=True, exist_ok=True)
+    _mkdir_durable(active_dir)
     temporary = active_dir / f".{logical}.tmp"
     _write_fsync(temporary, (revision + "\n").encode("utf-8"), "pointer-temp")
     _checkpoint("before_rename")
@@ -379,6 +379,21 @@ def _write_all(fd: int, payload: bytes) -> None:
         view = view[written:]
 
 
+def _mkdir_durable(path: Path) -> None:
+    """Create ``path`` and fsync each parent that receives a new directory entry."""
+    missing: list[Path] = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    for directory in reversed(missing):
+        directory.mkdir(exist_ok=True)
+        _fsync_dir(directory.parent, "ancestor-dir")
+
+
 def _write_fsync(path: Path, payload: bytes, event: str) -> None:
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     fd = os.open(path, flags, 0o644)
@@ -429,7 +444,7 @@ def _document_lock(root: Path, tenant: str, vault_id: str, logical: str):
     import hashlib
 
     directory = root / ".octopus-kb" / "locks"
-    directory.mkdir(parents=True, exist_ok=True)
+    _mkdir_durable(directory)
     name = hashlib.sha256(f"{tenant}\0{vault_id}\0{logical}".encode("utf-8")).hexdigest()
     fd = os.open(directory / f"{name}.lock", os.O_RDWR | os.O_CREAT, 0o644)
     try:
