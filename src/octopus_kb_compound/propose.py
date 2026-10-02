@@ -7,13 +7,23 @@ import json
 import os
 import re
 import tempfile
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from octopus_kb_compound.config import ConfigError, load_config
-from octopus_kb_compound.resolver import require_inside, resolve_vault
+from octopus_kb_compound.controls import (
+    InterpretationStore,
+    Reservation,
+    accounted_input,
+    interpretation_key,
+    load_budget,
+    load_policy,
+    request_digest,
+)
+from octopus_kb_compound.resolver import deployment_tenant, require_inside, resolve_vault
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -31,6 +41,16 @@ class ProposeInputError(ValueError):
 
 class ProposeRuntimeError(RuntimeError):
     """Runtime failure while producing a proposal."""
+
+
+class ProposeDeferred(ProposeRuntimeError):
+    """The prompt was not sent. The part is in the inbox."""
+
+    def __init__(self, reason: str, measured_size: int, path: str):
+        self.reason = reason
+        self.measured_size = measured_size
+        self.path = path
+        super().__init__(reason)
 
 
 @dataclass(frozen=True)
@@ -52,6 +72,7 @@ def propose_from_raw(
     vault: Path,
     *,
     profile_name: str | None = None,
+    provenance: str | None = None,
 ) -> ProposeResult:
     root = resolve_vault(vault)
     source = require_inside(root, raw_file)
@@ -88,7 +109,15 @@ def propose_from_raw(
 
     client = ChatClient(**profile.as_client_kwargs())
     try:
-        proposal = _request_proposal_json(client, prompt, root)
+        proposal, raw_response, response_key, replayed = _request_proposal_json(
+            client,
+            prompt,
+            root,
+            provenance=provenance or raw_rel_path,
+            prompt_digest=prompt_sha,
+            endpoint=profile.base_url,
+            model=profile.model,
+        )
     except LLMError as exc:
         raise ProposeRuntimeError(str(exc)) from exc
     if not isinstance(proposal, dict):
@@ -120,6 +149,8 @@ def propose_from_raw(
         )
         raise ProposeRuntimeError("proposal schema invalid")
 
+    if not replayed:
+        InterpretationStore(root).publish(response_key, raw_response)
     saved = save_proposal(proposal, root)
     return ProposeResult(
         proposal_id=str(proposal["id"]),
@@ -128,45 +159,138 @@ def propose_from_raw(
     )
 
 
-def _request_proposal_json(client: ChatClient, prompt: str, vault: Path) -> Any:
+def propose_from_part(part: dict, vault: Path, *, profile_name: str | None = None) -> ProposeResult:
+    """Propose one envelope part. The prompt contains that part and no others."""
+    root = resolve_vault(vault)
+    body = str(part.get("body") or "")
+    digest = str(part.get("part_digest") or "")
+    source = root / ".octopus-kb" / "part-propose" / f"{digest or 'part'}.md"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(body, encoding="utf-8")
+    return propose_from_raw(source, root, profile_name=profile_name, provenance=digest or source.name)
+
+
+def _request_proposal_json(
+    client: ChatClient,
+    prompt: str,
+    vault: Path,
+    *,
+    provenance: str,
+    prompt_digest: str,
+    endpoint: str,
+    model: str,
+) -> tuple[Any, str, str, bool]:
     messages = [{"role": "user", "content": prompt}]
+    budget = load_budget()
+    policy = load_policy()
     last_output = ""
+    response_format = {"type": "json_object"}
     for attempt in range(1, 3):
+        content, response_key, replayed = _controlled_send(
+            client,
+            messages,
+            vault=vault,
+            budget=budget,
+            policy=policy,
+            provenance=provenance,
+            prompt_digest=prompt_digest,
+            endpoint=endpoint,
+            model=model,
+            response_format=response_format,
+            source_path=provenance,
+        )
+        last_output = content
         try:
-            response = client.chat(
-                ChatRequest(
-                    messages=messages,
-                    json_object=True,
-                    temperature=0.1,
-                    max_tokens=4000,
-                )
-            )
-            last_output = response.content
-            return json.loads(response.content)
-        except LLMInvalidOutputError as exc:
-            last_output = str(exc)
+            if replayed or content:
+                return json.loads(content), content, response_key, replayed
         except json.JSONDecodeError as exc:
             last_output = str(exc)
-        except LLMError:
-            raise
-
         if attempt == 1:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": _retry_schema_reminder(),
-                }
-            )
+            messages.append({"role": "user", "content": _retry_schema_reminder()})
             continue
-
         _write_rejection(
             vault,
             "llm_non_json",
             {"reason": "llm_non_json", "last_output": last_output, "attempts": 2},
         )
         raise ProposeRuntimeError("LLM returned non-JSON output")
-
     raise ProposeRuntimeError("LLM returned non-JSON output")
+
+
+def _controlled_send(
+    client: ChatClient,
+    messages: list[dict],
+    *,
+    vault: Path,
+    budget,
+    policy,
+    provenance: str,
+    prompt_digest: str,
+    endpoint: str,
+    model: str,
+    response_format: dict,
+    source_path: str,
+) -> tuple[str, str, bool]:
+    decision = policy.apply(endpoint=endpoint, model=model, texts=[str(item["content"]) for item in messages])
+    if not decision.allowed:
+        _defer(vault, decision.disposition, 0, source_path)
+    redacted = [
+        {"role": item["role"], "content": text}
+        for item, text in zip(messages, decision.texts, strict=True)
+    ]
+    digest = request_digest(redacted, response_format)
+    key = interpretation_key(
+        tenant=deployment_tenant(),
+        provenance=provenance,
+        endpoint=endpoint,
+        model=model,
+        prompt_version_digest=prompt_digest,
+        request_digest_hex=digest,
+        policy_digest=policy.digest,
+    )
+    cached = InterpretationStore(vault).lookup(key)
+    if cached is not None:
+        return cached, key, True
+    measured = accounted_input(
+        [item["content"] for item in redacted],
+        response_format,
+        [],
+        decision.accounting or {},
+    )
+    output_allowance = 4000
+    exceeded = budget.reserve(Reservation(calls=1, input_tokens=measured, output_tokens=output_allowance, images=0))
+    if exceeded is not None:
+        _defer(vault, "oversized_prompt", measured + output_allowance, source_path)
+    try:
+        response = client.chat(
+            ChatRequest(
+                messages=redacted,
+                json_object=True,
+                temperature=0.1,
+                max_tokens=output_allowance,
+            )
+        )
+    except LLMInvalidOutputError as exc:
+        return str(exc), key, False
+    return response.content, key, False
+
+
+def _defer(vault: Path, reason: str, measured_size: int, source_path: str) -> None:
+    directory = vault / ".octopus-kb" / "inbox"
+    directory.mkdir(parents=True, exist_ok=True)
+    proposal_id = "deferred-" + uuid.uuid4().hex[:16]
+    payload = {
+        "id": proposal_id,
+        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "reason": reason,
+        "measured_size": measured_size,
+        "operations": [],
+        "source": {"kind": "propose", "path": source_path},
+        "status": "deferred",
+    }
+    target = directory / f"{proposal_id}.json"
+    target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    raise ProposeDeferred(reason, measured_size, target.relative_to(vault).as_posix())
 
 
 def _retry_schema_reminder() -> str:
