@@ -99,10 +99,25 @@ def test_proposal_load_returns_same_bytes(tmp_path):
     assert loaded["id"] == "2026-04-18T10-05-33-abc"
 
 
-def test_save_proposal_rejects_collision_with_existing_id(tmp_path):
-    """Append-only storage: a duplicate id must not silently overwrite."""
+def test_save_proposal_returns_the_identical_body(tmp_path):
+    """A second write of the same bytes keeps the existing file."""
+    from octopus_kb_compound.proposals import save_proposal
+
+    first = save_proposal(_valid_proposal(), vault_root=tmp_path)
+    before = first.read_bytes()
+    second = save_proposal(_valid_proposal(), vault_root=tmp_path)
+    assert second == first
+    assert first.read_bytes() == before
+
+
+def test_save_proposal_rejects_a_different_body_for_the_same_id(tmp_path):
+    """Append-only storage: a different body must not overwrite the file."""
     from octopus_kb_compound.proposals import ProposalCollisionError, save_proposal
 
     save_proposal(_valid_proposal(), vault_root=tmp_path)
+    changed = _valid_proposal()
+    changed["operations"][0]["entry"] = "2026-04-18: different"
     with pytest.raises(ProposalCollisionError):
-        save_proposal(_valid_proposal(), vault_root=tmp_path)
+        save_proposal(changed, vault_root=tmp_path)
+    stored = json.loads((tmp_path / ".octopus-kb" / "proposals" / "2026-04-18T10-05-33-abc.json").read_text(encoding="utf-8"))
+    assert stored["operations"][0]["entry"] == "2026-04-18: x"

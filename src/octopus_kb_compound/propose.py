@@ -58,13 +58,17 @@ class ProposeResult:
     proposal_id: str
     path: str
     operations: int
+    replayed: bool = False
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "proposal_id": self.proposal_id,
             "path": self.path,
             "operations": self.operations,
         }
+        if self.replayed:
+            payload["replayed"] = True
+        return payload
 
 
 def propose_from_raw(
@@ -156,6 +160,7 @@ def propose_from_raw(
         proposal_id=str(proposal["id"]),
         path=saved.relative_to(root).as_posix(),
         operations=len(proposal.get("operations", [])),
+        replayed=replayed,
     )
 
 

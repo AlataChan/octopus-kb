@@ -137,6 +137,36 @@ def test_replay_hit_makes_no_second_call(tmp_path, monkeypatch):
     assert len(calls) == 1
 
 
+def test_replay_with_the_stored_file_still_present_is_idempotent(tmp_path, monkeypatch):
+    vault, raw = _vault(tmp_path)
+    calls = _install_transport(monkeypatch, [_proposal("replay-kept")])
+    first = propose_from_raw(raw, vault)
+    stored = vault / ".octopus-kb" / "proposals" / "replay-kept.json"
+    before = stored.read_bytes()
+    second = propose_from_raw(raw, vault)
+    assert len(calls) == 1
+    assert second.replayed is True
+    assert second.to_dict()["replayed"] is True
+    assert second.path == first.path
+    assert stored.read_bytes() == before
+
+
+def test_replay_with_a_different_stored_body_is_a_collision(tmp_path, monkeypatch):
+    from octopus_kb_compound.proposals import ProposalCollisionError
+
+    vault, raw = _vault(tmp_path)
+    calls = _install_transport(monkeypatch, [_proposal("replay-clash")])
+    propose_from_raw(raw, vault)
+    stored = vault / ".octopus-kb" / "proposals" / "replay-clash.json"
+    body = json.loads(stored.read_text(encoding="utf-8"))
+    body["operations"][0]["entry"] = "2026-04-18: replaced"
+    stored.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(ProposalCollisionError):
+        propose_from_raw(raw, vault)
+    assert len(calls) == 1
+    assert json.loads(stored.read_text(encoding="utf-8"))["operations"][0]["entry"] == "2026-04-18: replaced"
+
+
 def test_large_legacy_raw_is_deferred(tmp_path, monkeypatch):
     vault, raw = _vault(tmp_path)
     raw.write_text("x" * 200_000, encoding="utf-8")
