@@ -68,7 +68,8 @@ def test_cli_propose_writes_proposal_file_when_llm_returns_valid_json(tmp_path, 
     assert rc == 0
     out = json.loads(buf.getvalue())
     assert out["operations"] == 1
-    written = vault / ".octopus-kb" / "proposals" / (fake_proposal["id"] + ".json")
+    assert out["proposal_id"] != fake_proposal["id"]
+    written = vault / ".octopus-kb" / "proposals" / (out["proposal_id"] + ".json")
     assert written.exists()
     saved = json.loads(written.read_text(encoding="utf-8"))
     assert saved["source"]["path"] == "raw/demo.md"
@@ -122,7 +123,8 @@ def test_cli_propose_overrides_llm_provenance_with_local_sha(tmp_path, monkeypat
     rc = main(["propose", str(raw), "--vault", str(vault), "--json"])
     assert rc == 0
 
-    saved_path = vault / ".octopus-kb" / "proposals" / "test-provenance.json"
+    saved_path = next((vault / ".octopus-kb" / "proposals").glob("*.json"))
+    assert saved_path.name != "test-provenance.json"
     saved = json.loads(saved_path.read_text(encoding="utf-8"))
 
     assert saved["source"]["sha256"] == expected_sha

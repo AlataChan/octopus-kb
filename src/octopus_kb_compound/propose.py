@@ -42,7 +42,7 @@ from octopus_kb_compound.llm import (
     LLMNetworkError,
     LLMRateLimitError,
 )
-from octopus_kb_compound.proposals import save_proposal, validate_proposal_dict
+from octopus_kb_compound.proposals import proposal_id_from_key, save_proposal, validate_proposal_dict
 from octopus_kb_compound.retrieve import build_retrieval_bundle
 
 
@@ -161,17 +161,15 @@ def propose_from_raw(
         )
         raise ProposeRuntimeError("proposal schema invalid")
 
-    proposal["source"] = {
-        "kind": "raw_file",
-        "path": raw_rel_path,
-        "sha256": raw_sha,
-    }
-    proposal["produced_by"] = {
-        "provider_profile": profile_key,
-        "model": profile.model,
-        "prompt_version": f"prompts/propose.md@sha256:{prompt_sha}",
-    }
-    proposal["status"] = "pending"
+    _stamp_proposal(
+        proposal,
+        proposal_id=proposal_id_from_key(response_key),
+        raw_rel_path=raw_rel_path,
+        raw_sha=raw_sha,
+        profile_key=profile_key,
+        model=profile.model,
+        prompt_sha=prompt_sha,
+    )
 
     errors = validate_proposal_dict(proposal)
     if errors:
@@ -194,17 +192,15 @@ def propose_from_raw(
         if stored != raw_response:
             proposal = json.loads(stored)
             raw_response = stored
-            proposal["source"] = {
-                "kind": "raw_file",
-                "path": raw_rel_path,
-                "sha256": raw_sha,
-            }
-            proposal["produced_by"] = {
-                "provider_profile": profile_key,
-                "model": profile.model,
-                "prompt_version": f"prompts/propose.md@sha256:{prompt_sha}",
-            }
-            proposal["status"] = "pending"
+            _stamp_proposal(
+                proposal,
+                proposal_id=proposal_id_from_key(response_key),
+                raw_rel_path=raw_rel_path,
+                raw_sha=raw_sha,
+                profile_key=profile_key,
+                model=profile.model,
+                prompt_sha=prompt_sha,
+            )
     saved = save_proposal(proposal, root)
     return ProposeResult(
         proposal_id=str(proposal["id"]),
@@ -212,6 +208,30 @@ def propose_from_raw(
         operations=len(proposal.get("operations", [])),
         replayed=replayed,
     )
+
+
+def _stamp_proposal(
+    proposal: dict,
+    *,
+    proposal_id: str,
+    raw_rel_path: str,
+    raw_sha: str,
+    profile_key: str,
+    model: str,
+    prompt_sha: str,
+) -> None:
+    proposal["id"] = proposal_id
+    proposal["source"] = {
+        "kind": "raw_file",
+        "path": raw_rel_path,
+        "sha256": raw_sha,
+    }
+    proposal["produced_by"] = {
+        "provider_profile": profile_key,
+        "model": model,
+        "prompt_version": f"prompts/propose.md@sha256:{prompt_sha}",
+    }
+    proposal["status"] = "pending"
 
 
 def propose_from_part(part: dict, vault: Path, *, profile_name: str | None = None) -> ProposeResult:

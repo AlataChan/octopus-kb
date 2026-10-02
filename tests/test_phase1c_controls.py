@@ -131,8 +131,8 @@ def test_denied_policy_and_missing_accounting_make_no_calls(tmp_path, monkeypatc
 def test_replay_hit_makes_no_second_call(tmp_path, monkeypatch):
     vault, raw = _vault(tmp_path)
     calls = _install_transport(monkeypatch, [_proposal("replay-1")])
-    propose_from_raw(raw, vault)
-    (vault / ".octopus-kb" / "proposals" / "replay-1.json").unlink()
+    first = propose_from_raw(raw, vault)
+    (vault / first.path).unlink()
     propose_from_raw(raw, vault)
     assert len(calls) == 1
 
@@ -141,7 +141,7 @@ def test_replay_with_the_stored_file_still_present_is_idempotent(tmp_path, monke
     vault, raw = _vault(tmp_path)
     calls = _install_transport(monkeypatch, [_proposal("replay-kept")])
     first = propose_from_raw(raw, vault)
-    stored = vault / ".octopus-kb" / "proposals" / "replay-kept.json"
+    stored = vault / first.path
     before = stored.read_bytes()
     second = propose_from_raw(raw, vault)
     assert len(calls) == 1
@@ -156,8 +156,8 @@ def test_replay_with_a_different_stored_body_is_a_collision(tmp_path, monkeypatc
 
     vault, raw = _vault(tmp_path)
     calls = _install_transport(monkeypatch, [_proposal("replay-clash")])
-    propose_from_raw(raw, vault)
-    stored = vault / ".octopus-kb" / "proposals" / "replay-clash.json"
+    first = propose_from_raw(raw, vault)
+    stored = vault / first.path
     body = json.loads(stored.read_text(encoding="utf-8"))
     body["operations"][0]["entry"] = "2026-04-18: replaced"
     stored.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")

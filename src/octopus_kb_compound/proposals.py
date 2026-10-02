@@ -31,6 +31,14 @@ def validate_proposal_dict(data: dict[str, Any]) -> list[str]:
     return [error.message for error in errors]
 
 
+def proposal_id_from_key(interpretation_key: str) -> str:
+    """Identity is the interpretation key. A model-supplied id is not used."""
+
+    if not interpretation_key or "/" in interpretation_key or "\\" in interpretation_key:
+        raise ValueError("proposal id source is not a safe interpretation key")
+    return interpretation_key
+
+
 def proposal_bytes(proposal: dict[str, Any]) -> bytes:
     """Canonical on-disk bytes for a proposal body."""
 
