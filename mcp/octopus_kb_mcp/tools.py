@@ -11,6 +11,7 @@ from octopus_kb_compound.lookup import lookup_term
 from octopus_kb_compound.neighbors import compute_neighbors
 from octopus_kb_compound.profile import load_vault_profile
 from octopus_kb_compound.propose import propose_from_raw
+from octopus_kb_compound.resolver import require_inside, resolve_vault
 from octopus_kb_compound.retrieve import build_retrieval_bundle
 from octopus_kb_compound.vault import scan_markdown_files
 
@@ -18,7 +19,7 @@ DEFAULT_MAX_TEXT_CHARS = 4000
 
 
 def export_graph(vault: str | Path) -> dict[str, Any]:
-    root = Path(vault)
+    root = resolve_vault(vault)
     pages = scan_markdown_files(root, load_vault_profile(root))
     aliases = build_alias_index(pages)
     nodes = _nodes(pages)
@@ -36,7 +37,7 @@ def retrieve_bundle(
     max_tokens: int = 1500,
     max_text_chars: int = DEFAULT_MAX_TEXT_CHARS,
 ) -> dict[str, Any]:
-    root = Path(vault)
+    root = resolve_vault(vault)
     bundle = build_retrieval_bundle(root, query, max_tokens=max_tokens)
     data = bundle.to_dict()
     items: list[dict[str, Any]] = []
@@ -75,7 +76,7 @@ def ingest(
     tags: list[str] | None = None,
     lang: str = "zh",
 ) -> dict[str, Any]:
-    root = Path(vault)
+    root = resolve_vault(vault)
     path = generate_raw_page(
         markdown,
         {"title": title or "source", "ingest_method": "alata"},
@@ -87,11 +88,13 @@ def ingest(
 
 
 def neighbors(vault: str | Path, page: str) -> dict[str, Any]:
-    return compute_neighbors(page, Path(vault)).to_dict()
+    root = resolve_vault(vault)
+    require_inside(root, page)
+    return compute_neighbors(page, root).to_dict()
 
 
 def lookup(vault: str | Path, term: str) -> dict[str, Any]:
-    return lookup_term(term, Path(vault)).to_dict()
+    return lookup_term(term, resolve_vault(vault)).to_dict()
 
 
 def propose(vault: str | Path, raw_path: str, *, profile: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -99,17 +102,21 @@ def propose(vault: str | Path, raw_path: str, *, profile: dict[str, Any] | None 
     # per-call config outside the vault; M1 keeps this wrapper non-persistent.
     if profile:
         raise ValueError("profile injection is handled by the caller in M2")
-    return propose_from_raw(Path(vault) / raw_path, Path(vault)).to_dict()
+    root = resolve_vault(vault)
+    source = require_inside(root, raw_path)
+    return propose_from_raw(source, root).to_dict()
 
 
 def validate(vault: str | Path, proposal_path: str, *, apply: bool = False) -> dict[str, Any]:
-    return validate_proposal_file(Path(vault) / proposal_path, Path(vault), apply=apply).to_dict()
+    root = resolve_vault(vault)
+    proposal = require_inside(root, proposal_path)
+    return validate_proposal_file(proposal, root, apply=apply).to_dict()
 
 
 def healthcheck(vault: str | Path | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {"ok": True}
     if vault is not None:
-        payload["vaultExists"] = Path(vault).exists()
+        payload["vaultExists"] = resolve_vault(vault).exists()
     return payload
 
 

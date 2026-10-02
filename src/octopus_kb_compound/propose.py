@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from octopus_kb_compound.config import ConfigError, load_config
+from octopus_kb_compound.resolver import require_inside, resolve_vault
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -52,8 +53,8 @@ def propose_from_raw(
     *,
     profile_name: str | None = None,
 ) -> ProposeResult:
-    root = Path(vault)
-    source = Path(raw_file)
+    root = resolve_vault(vault)
+    source = require_inside(root, raw_file)
     _validate_inputs(source, root)
 
     raw_bytes = source.read_bytes()

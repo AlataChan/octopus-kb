@@ -35,6 +35,7 @@ from octopus_kb_compound.propose import (
     propose_from_raw,
 )
 import octopus_kb_compound.retrieve as retrieve_mod
+from octopus_kb_compound.resolver import VaultRootError, configured_vaults, require_inside, resolve_vault
 from octopus_kb_compound.retrieve import build_retrieval_bundle
 from octopus_kb_compound.schema import validate_frontmatter
 from octopus_kb_compound.summary import render_summary, summarize_vault
@@ -153,8 +154,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except VaultRootError as exc:
+        print(exc.reason, file=sys.stderr)
+        return 2
+
+
+def _main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if getattr(args, "vault", None) is not None:
+        args.vault = resolve_vault(args.vault)
 
     if args.command == "lint":
         rc = _validate_vault_dir(args.vault)
@@ -177,6 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         rc = _validate_page_file(args.page)
         if rc is not None:
             return rc
+        require_inside(args.vault, args.page)
         profile = load_vault_profile(args.vault)
         pages = scan_markdown_files(args.vault, profile)
         target_page = load_page(args.page, root=args.vault)
@@ -213,6 +225,8 @@ def main(argv: list[str] | None = None) -> int:
         rc = _validate_page_file(args.path)
         if rc is not None:
             return rc
+        if configured_vaults() is not None:
+            require_inside(args.vault, args.path)
 
         try:
             body, metadata = ingest.convert_file_to_markdown(str(args.path))
@@ -550,7 +564,7 @@ def _resolve_page_in_vault(page: Path, vault: Path) -> str | None:
     vault_root = vault.resolve()
     page_path = page.resolve() if page.is_absolute() else (vault / page).resolve()
     if not page_path.is_relative_to(vault_root):
-        print(f"Page is outside vault: {page}", file=sys.stderr)
+        print("outside_root", file=sys.stderr)
         return None
     if not page_path.exists():
         print(f"Page does not exist: {page}", file=sys.stderr)

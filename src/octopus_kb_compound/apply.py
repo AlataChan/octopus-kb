@@ -16,6 +16,7 @@ from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.models import LintFinding, PageRecord
 from octopus_kb_compound.proposals import load_proposal
+from octopus_kb_compound.resolver import require_inside, resolve_vault
 from octopus_kb_compound.validators.declarative import (
     VaultState,
     Verdict,
@@ -71,8 +72,8 @@ def validate_proposal_file(
     apply: bool = False,
     override: dict[str, list[str]] | None = None,
 ) -> ApplyResult:
-    root = Path(vault)
-    path = Path(proposal_path)
+    root = resolve_vault(vault)
+    path = require_inside(root, proposal_path)
     if not root.exists() or not root.is_dir():
         raise ValidateInputError(f"Vault is not a directory: {root}")
     if not path.exists() or not path.is_file():
@@ -179,7 +180,7 @@ def apply_proposal(
 
 
 def recover_proposal(proposal_id: str, vault: Path | str) -> ApplyResult:
-    root = Path(vault)
+    root = resolve_vault(vault)
     if not root.exists() or not root.is_dir():
         raise ValidateInputError(f"Vault is not a directory: {root}")
     audit_path = audit.find_entry(root, proposal_id)
