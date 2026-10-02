@@ -6,7 +6,7 @@ from pathlib import Path
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.models import PageRecord, VaultProfile
 from octopus_kb_compound.profile import load_vault_profile
-from octopus_kb_compound.resolver import VaultRootError, contained_leaf
+from octopus_kb_compound.resolver import VaultRootError, contained_leaf, is_managed_path
 
 
 def load_page(path: str | Path, root: str | Path | None = None) -> PageRecord:
@@ -40,8 +40,10 @@ def scan_markdown_files(root: str | Path, profile: VaultProfile | None = None) -
         if _is_excluded(relative_path, profile):
             continue
         try:
-            contained_leaf(root_path, path)
+            real = contained_leaf(root_path, path)
         except VaultRootError:
+            continue
+        if is_managed_path(real.relative_to(root_path.resolve())):
             continue
         pages.append(load_page(path, root=root_path))
     return pages

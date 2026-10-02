@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from octopus_kb_compound.models import PageRecord, VaultProfile
-from octopus_kb_compound.resolver import VaultRootError, contained_leaf
+from octopus_kb_compound.resolver import VaultRootError, contained_leaf, is_managed_path
 from octopus_kb_compound.vault import load_page, scan_markdown_files
 
 UNLEDGERED = {
@@ -38,6 +38,8 @@ class VaultView:
 
 def load_view(root: str | Path, profile: VaultProfile | None = None) -> VaultView:
     root_path = Path(root)
+    if is_managed_path(root_path.resolve()):
+        raise VaultRootError("managed_root")
     pointers = read_pointers(root_path)
     hook = AFTER_PIN
     if hook is not None:

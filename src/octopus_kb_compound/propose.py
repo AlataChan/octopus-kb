@@ -23,7 +23,15 @@ from octopus_kb_compound.controls import (
     load_policy,
     request_digest,
 )
-from octopus_kb_compound.resolver import deployment_tenant, require_inside, resolve_vault
+from octopus_kb_compound.active import load_view
+from octopus_kb_compound.resolver import (
+    VaultRootError,
+    deployment_tenant,
+    is_managed_path,
+    require_inside,
+    resolve_vault,
+    vault_relative,
+)
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -82,7 +90,14 @@ def propose_from_raw(
     source = require_inside(root, raw_file)
     _validate_inputs(source, root)
 
-    raw_bytes = source.read_bytes()
+    relative = vault_relative(root, source)
+    if is_managed_path(relative):
+        pinned = load_view(root).text_by_path.get(relative)
+        if pinned is None:
+            raise VaultRootError("inactive_revision")
+        raw_bytes = pinned.encode("utf-8")
+    else:
+        raw_bytes = source.read_bytes()
     raw_body = raw_bytes.decode("utf-8", errors="replace")
     raw_sha = hashlib.sha256(raw_bytes).hexdigest()
     raw_frontmatter, _ = parse_document(raw_body)

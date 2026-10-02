@@ -21,8 +21,7 @@ from octopus_kb_compound.links import build_alias_index, normalize_page_name
 from octopus_kb_compound.models import PageRecord, VaultProfile
 from octopus_kb_compound.profile import load_vault_profile
 from octopus_kb_compound.active import UNLEDGERED, load_view
-from octopus_kb_compound.resolver import require_inside
-from octopus_kb_compound.vault import load_page
+from octopus_kb_compound.resolver import VaultRootError, contained_leaf, is_managed_path, require_inside, vault_relative
 
 
 class ObsidianStore:
@@ -57,7 +56,12 @@ class ObsidianStore:
     def read_page(self, ref: CanonicalRef | StorageRef) -> CanonicalPage:
         if isinstance(ref, StorageRef):
             storage = require_obsidian_storage_ref(ref)
-            return page_record_to_canonical(load_page(self.root / storage.locator, root=self.root))
+            raw = self.read_markdown(storage.locator)
+            frontmatter, body = parse_document(raw)
+            title = str(frontmatter.get("title") or Path(storage.locator).stem)
+            return page_record_to_canonical(
+                PageRecord(path=storage.locator, title=title, body=body, frontmatter=frontmatter)
+            )
 
         matches = [
             page
@@ -85,7 +89,13 @@ class ObsidianStore:
         if pinned is not None:
             return pinned
         target = require_inside(self.root, locator)
-        return target.read_text(encoding="utf-8", errors="replace")
+        relative = vault_relative(self.root, target)
+        pinned = self.view().text_by_path.get(relative)
+        if pinned is not None:
+            return pinned
+        if is_managed_path(relative) or is_managed_path(locator):
+            raise VaultRootError("inactive_revision")
+        return contained_leaf(self.root, target).read_text(encoding="utf-8", errors="replace")
 
     def markdown_by_path(self, pages: list[PageRecord]) -> dict[str, str]:
         return {page.path: self.read_markdown(page.path) for page in pages}

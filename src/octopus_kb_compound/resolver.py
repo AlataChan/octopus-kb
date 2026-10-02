@@ -18,6 +18,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+MANAGED_DIR = ".octopus-kb"
+
+
 class VaultRootError(Exception):
     """A path escaped the trusted roots. ``reason`` is the public name."""
 
@@ -75,9 +78,24 @@ def resolve_vault_id(vault_id: str) -> ConfiguredVault:
     return table[vault_id]
 
 
+def is_managed_path(path: str | Path) -> bool:
+    """True when ``path`` is the managed tree or a file inside it."""
+    return MANAGED_DIR in Path(path).parts
+
+
+def vault_relative(root: str | Path, candidate: str | Path) -> str:
+    """Real path of ``candidate`` relative to ``root``, after the leaf check."""
+    boundary = Path(root).resolve()
+    raw = Path(candidate)
+    leaf = raw if raw.is_absolute() else boundary / raw
+    return contained_leaf(boundary, leaf).relative_to(boundary).as_posix()
+
+
 def resolve_vault(vault: str | Path) -> Path:
     """Return the real vault path, or raise ``VaultRootError``."""
     resolved = Path(vault).resolve()
+    if is_managed_path(resolved):
+        raise VaultRootError("managed_root")
     table = configured_vaults()
     if table is None:
         return resolved
