@@ -11,6 +11,7 @@ from octopus_kb_compound.apply import (
     recover_proposal,
     validate_proposal_file,
 )
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound import ingest
 from octopus_kb_compound.envelope import ingest_envelope
 from octopus_kb_compound.export import export_graph_artifacts
@@ -40,7 +41,7 @@ from octopus_kb_compound.resolver import VaultRootError, configured_vaults, requ
 from octopus_kb_compound.retrieve import build_retrieval_bundle
 from octopus_kb_compound.schema import validate_frontmatter
 from octopus_kb_compound.summary import render_summary, summarize_vault
-from octopus_kb_compound.vault import load_page, scan_markdown_files
+from octopus_kb_compound.vault import load_page
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -182,10 +183,16 @@ def _main(argv: list[str] | None = None) -> int:
         if rc is not None:
             return rc
         profile = load_vault_profile(args.vault)
-        pages = scan_markdown_files(args.vault, profile)
+        store = ObsidianStore(args.vault, profile)
+        pages = store.list_page_records()
         findings = lint_pages(pages)
         if args.json:
-            print(json.dumps({"findings": [_lint_finding_to_dict(finding) for finding in findings]}, ensure_ascii=False))
+            rows = []
+            for finding in findings:
+                row = _lint_finding_to_dict(finding)
+                row["provenance"] = store.provenance_for(finding.path)
+                rows.append(row)
+            print(json.dumps({"findings": rows}, ensure_ascii=False))
         else:
             for finding in findings:
                 print(f"{finding.code}\t{finding.path}\t{finding.message}")
@@ -200,7 +207,7 @@ def _main(argv: list[str] | None = None) -> int:
             return rc
         require_inside(args.vault, args.page)
         profile = load_vault_profile(args.vault)
-        pages = scan_markdown_files(args.vault, profile)
+        pages = ObsidianStore(args.vault, profile).list_page_records()
         target_page = load_page(args.page, root=args.vault)
         suggestions = suggest_links(target_page.body, pages, current_title=target_page.title)
         for suggestion in suggestions:

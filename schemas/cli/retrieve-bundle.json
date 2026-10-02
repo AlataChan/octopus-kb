@@ -55,6 +55,7 @@
       "properties": {
         "path": {"type": "string"},
         "title": {"type": "string"},
+        "provenance": {"$ref": "#/$defs/provenance"},
         "reason": {
           "type": "string",
           "enum": [
@@ -67,6 +68,17 @@
             "log_anchor"
           ]
         }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ledger_status", "revision_id", "logical_document_id", "access_label"],
+      "properties": {
+        "ledger_status": {"type": "string"},
+        "revision_id": {"type": ["string", "null"]},
+        "logical_document_id": {"type": ["string", "null"]},
+        "access_label": {"type": ["string", "null"]}
       }
     }
   }

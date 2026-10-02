@@ -22,6 +22,7 @@ class NeighborsResult:
     aliases: list[str]
     canonical_identity: str | None
     next: list[str]
+    provenance: dict
 
     def to_dict(self) -> dict:
         return {
@@ -31,11 +32,13 @@ class NeighborsResult:
             "aliases": self.aliases,
             "canonical_identity": self.canonical_identity,
             "next": self.next,
+            "provenance": self.provenance,
         }
 
 
 def compute_neighbors(page_rel_path: str, vault: Path) -> NeighborsResult:
-    pages = ObsidianStore(vault).list_page_records()
+    store = ObsidianStore(vault)
+    pages = store.list_page_records()
     target = _page_by_path(pages, page_rel_path)
     if target is None:
         raise ValueError(f"Page not found in vault: {page_rel_path}")
@@ -53,6 +56,7 @@ def compute_neighbors(page_rel_path: str, vault: Path) -> NeighborsResult:
         aliases=frontmatter_aliases(target),
         canonical_identity=_canonical_identity(target),
         next=[f'octopus-kb impacted-pages "{target.path}" --vault "{vault}" --json'],
+        provenance=store.provenance_for(target.path),
     )
 
 

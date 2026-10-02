@@ -6,10 +6,9 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.links import build_alias_index, extract_wikilinks, frontmatter_aliases, normalize_page_name
 from octopus_kb_compound.models import PageRecord
-from octopus_kb_compound.profile import load_vault_profile
-from octopus_kb_compound.vault import scan_markdown_files
 
 
 ARTIFACT_NAMES = ("nodes.json", "edges.json", "manifest.json", "aliases.json")
@@ -20,12 +19,16 @@ def export_graph_artifacts(vault: str | Path, out_dir: str | Path) -> None:
     output = Path(out_dir)
     output.mkdir(parents=True, exist_ok=True)
 
-    pages = scan_markdown_files(root, load_vault_profile(root))
+    store = ObsidianStore(root)
+    pages = store.list_page_records()
     alias_index = build_alias_index(pages)
     nodes = _nodes(pages)
     node_ids = {node["id"] for node in nodes}
     edges = _edges(pages, alias_index, node_ids)
-    manifest = {"pages": [page.path for page in pages]}
+    manifest = {
+        "pages": [page.path for page in pages],
+        "provenance": {page.path: store.provenance_for(page.path) for page in pages},
+    }
 
     with tempfile.TemporaryDirectory(prefix="octopus-export-", dir=str(output.parent)) as workspace:
         staging = Path(workspace) / "staging"

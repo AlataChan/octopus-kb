@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from octopus_kb_compound.apply import validate_proposal_file
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.envelope import ingest_envelope as _ingest_envelope
 from octopus_kb_compound.export import _edges, _nodes
 from octopus_kb_compound.ingest import generate_raw_page
@@ -14,20 +15,21 @@ from octopus_kb_compound.profile import load_vault_profile
 from octopus_kb_compound.propose import propose_from_raw
 from octopus_kb_compound.resolver import require_inside, resolve_vault
 from octopus_kb_compound.retrieve import build_retrieval_bundle
-from octopus_kb_compound.vault import scan_markdown_files
 
 DEFAULT_MAX_TEXT_CHARS = 4000
 
 
 def export_graph(vault: str | Path) -> dict[str, Any]:
     root = resolve_vault(vault)
-    pages = scan_markdown_files(root, load_vault_profile(root))
+    store = ObsidianStore(root, load_vault_profile(root))
+    pages = store.list_page_records()
     aliases = build_alias_index(pages)
     nodes = _nodes(pages)
     node_ids = {node["id"] for node in nodes}
     return {
         "nodes": nodes,
         "edges": _edges(pages, aliases, node_ids),
+        "provenance": {page.path: store.provenance_for(page.path) for page in pages},
     }
 
 
@@ -39,7 +41,8 @@ def retrieve_bundle(
     max_text_chars: int = DEFAULT_MAX_TEXT_CHARS,
 ) -> dict[str, Any]:
     root = resolve_vault(vault)
-    bundle = build_retrieval_bundle(root, query, max_tokens=max_tokens)
+    store = ObsidianStore(root)
+    bundle = build_retrieval_bundle(root, query, max_tokens=max_tokens, store=store)
     data = bundle.to_dict()
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -48,7 +51,7 @@ def retrieve_bundle(
         if path in seen:
             continue
         seen.add(path)
-        text = _read_page_text(root, path, max_text_chars)
+        text = store.read_markdown(path)[:max_text_chars] if path else ""
         item = _item_for_path(data, path) or {"path": path, "title": Path(path).stem, "reason": "bundle"}
         items.append(
             {
@@ -57,6 +60,7 @@ def retrieve_bundle(
                 "reason": item.get("reason") or "bundle",
                 "text": text,
                 "tokenEstimate": _estimate_tokens(text),
+                "provenance": store.provenance_for(path),
             }
         )
 
@@ -151,15 +155,6 @@ def _item_for_path(data: dict[str, Any], path: str) -> dict[str, Any] | None:
             if isinstance(item, dict) and item.get("path") == path:
                 return item
     return None
-
-
-def _read_page_text(root: Path, rel_path: str, cap: int) -> str:
-    path = root / rel_path
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return ""
-    return text[:cap]
 
 
 def _estimate_tokens(text: str) -> int:

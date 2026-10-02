@@ -7,7 +7,7 @@ from pathlib import Path
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.models import PageRecord
 from octopus_kb_compound.profile import load_vault_profile
-from octopus_kb_compound.vault import scan_markdown_files
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 
 
 @dataclass(slots=True)
@@ -23,7 +23,7 @@ class VaultSummary:
 def summarize_vault(root: str | Path) -> VaultSummary:
     root_path = Path(root)
     profile = load_vault_profile(root_path)
-    pages = scan_markdown_files(root_path, profile)
+    pages = ObsidianStore(root_path, profile).list_page_records()
     findings = lint_pages(pages)
     return VaultSummary(
         total_pages=len(pages),

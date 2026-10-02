@@ -20,7 +20,9 @@ from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.links import build_alias_index, normalize_page_name
 from octopus_kb_compound.models import PageRecord, VaultProfile
 from octopus_kb_compound.profile import load_vault_profile
-from octopus_kb_compound.vault import load_page, scan_markdown_files
+from octopus_kb_compound.active import UNLEDGERED, load_view
+from octopus_kb_compound.resolver import require_inside
+from octopus_kb_compound.vault import load_page
 
 
 class ObsidianStore:
@@ -33,6 +35,7 @@ class ObsidianStore:
     def __init__(self, root: str | Path, profile: VaultProfile | None = None):
         self.root = Path(root)
         self.profile = profile or load_vault_profile(self.root)
+        self._view = None
 
     def list_pages(self) -> list[CanonicalPage]:
         return [
@@ -41,7 +44,15 @@ class ObsidianStore:
         ]
 
     def list_page_records(self) -> list[PageRecord]:
-        return scan_markdown_files(self.root, self.profile)
+        return self.view().pages
+
+    def provenance_for(self, path: str) -> dict:
+        return dict(self.view().provenance.get(path, UNLEDGERED))
+
+    def view(self):
+        if self._view is None:
+            self._view = load_view(self.root, self.profile)
+        return self._view
 
     def read_page(self, ref: CanonicalRef | StorageRef) -> CanonicalPage:
         if isinstance(ref, StorageRef):
@@ -70,7 +81,11 @@ class ObsidianStore:
         return page_record_to_canonical(candidates[0]).ref
 
     def read_markdown(self, locator: str) -> str:
-        return (self.root / locator).read_text(encoding="utf-8", errors="replace")
+        pinned = self.view().text_by_path.get(locator)
+        if pinned is not None:
+            return pinned
+        target = require_inside(self.root, locator)
+        return target.read_text(encoding="utf-8", errors="replace")
 
     def markdown_by_path(self, pages: list[PageRecord]) -> dict[str, str]:
         return {page.path: self.read_markdown(page.path) for page in pages}
