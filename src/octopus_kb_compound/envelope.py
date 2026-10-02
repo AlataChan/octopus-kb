@@ -21,6 +21,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -182,10 +183,35 @@ def _schema_error(name: str, instance: dict) -> bool:
 def _stage(root: Path, logical: str, revision: str, part: dict) -> None:
     digest = part["part_digest"]
     target = root / ".octopus-kb" / "staging" / logical / revision / f"{digest}.json"
-    if target.exists():
+    payload = canonical_bytes(part) + b"\n"
+    if target.is_file() and _stage_is_complete(target, digest, payload):
         return
     target.parent.mkdir(parents=True, exist_ok=True)
-    _write_bytes(target, canonical_bytes(part) + b"\n")
+    _publish_bytes(target, payload)
+
+
+def _stage_is_complete(path: Path, digest: str, payload: bytes) -> bool:
+    try:
+        raw = path.read_bytes()
+        parsed = json.loads(raw)
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        return False
+    return isinstance(parsed, dict) and parsed.get("part_digest") == digest and raw == payload
+
+
+def _publish_bytes(path: Path, payload: bytes) -> None:
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    tmp_path = Path(tmp_name)
+    try:
+        _write_all(fd, payload)
+        os.fsync(fd)
+        os.close(fd)
+        fd = -1
+        os.replace(tmp_path, path)
+    finally:
+        if fd >= 0:
+            os.close(fd)
+        tmp_path.unlink(missing_ok=True)
 
 
 def _missing_indexes(root: Path, logical: str, revision: str, manifest: dict) -> list[int]:
@@ -213,7 +239,12 @@ def _staged_parts(root: Path, logical: str, revision: str) -> list[dict]:
         return []
     loaded = []
     for path in sorted(directory.glob("*.json")):
-        loaded.append(json.loads(path.read_text(encoding="utf-8")))
+        try:
+            parsed = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeError):
+            continue
+        if isinstance(parsed, dict) and parsed.get("part_digest") == path.stem:
+            loaded.append(parsed)
     return loaded
 
 
@@ -335,6 +366,15 @@ def _read_pointer(root: Path, logical: str) -> str | None:
 
 def _write_bytes(path: Path, payload: bytes) -> None:
     path.write_bytes(payload)
+
+
+def _write_all(fd: int, payload: bytes) -> None:
+    view = memoryview(payload)
+    while view:
+        written = os.write(fd, view)
+        if written <= 0:
+            raise OSError("short write")
+        view = view[written:]
 
 
 def _write_fsync(path: Path, payload: bytes, event: str) -> None:
