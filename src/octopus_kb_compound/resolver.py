@@ -97,6 +97,23 @@ def require_inside(vault: str | Path, candidate: str | Path) -> Path:
     return target
 
 
+def contained_leaf(root: str | Path, candidate: str | Path) -> Path:
+    """Real path of one leaf that stays inside ``root``.
+
+    Call this before reading the leaf. An escaping symlink, a broken link,
+    and any other path whose realpath leaves ``root`` raise ``VaultRootError``
+    and are not opened.
+    """
+    boundary = Path(root).resolve()
+    try:
+        target = Path(candidate).resolve(strict=True)
+    except OSError as exc:
+        raise VaultRootError("outside_root") from exc
+    if not _contained(target, boundary):
+        raise VaultRootError("outside_root")
+    return target
+
+
 def _contained(path: Path, root: Path) -> bool:
     try:
         path.resolve().relative_to(root.resolve())

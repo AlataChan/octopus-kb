@@ -6,11 +6,13 @@ from pathlib import Path
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.models import PageRecord, VaultProfile
 from octopus_kb_compound.profile import load_vault_profile
+from octopus_kb_compound.resolver import VaultRootError, contained_leaf
 
 
 def load_page(path: str | Path, root: str | Path | None = None) -> PageRecord:
     page_path = Path(path)
-    raw = page_path.read_text(encoding="utf-8", errors="replace")
+    source = contained_leaf(root, page_path) if root is not None else page_path
+    raw = source.read_text(encoding="utf-8", errors="replace")
     frontmatter, body = parse_document(raw)
     title = str(frontmatter.get("title") or page_path.stem)
     stored_path = str(page_path)
@@ -36,6 +38,10 @@ def scan_markdown_files(root: str | Path, profile: VaultProfile | None = None) -
         if _is_hidden_path(relative_path):
             continue
         if _is_excluded(relative_path, profile):
+            continue
+        try:
+            contained_leaf(root_path, path)
+        except VaultRootError:
             continue
         pages.append(load_page(path, root=root_path))
     return pages
