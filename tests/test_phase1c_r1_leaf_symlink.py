@@ -140,7 +140,7 @@ def test_retrieve_export_lookup_neighbors_and_propose_hide_escaping_bytes(vault,
 
     captured: list[str] = []
 
-    def _capture(self, req):
+    def _capture(self, req, **_kwargs):
         captured.append(json.dumps(req.messages))
         raise LLMError("stop-before-network")
 

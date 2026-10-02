@@ -77,7 +77,7 @@ class ChatClient:
         self.max_retries = max_retries
         self._transport = transport or _default_transport()
 
-    def chat(self, req: ChatRequest) -> ChatResponse:
+    def chat(self, req: ChatRequest, *, retries: int | None = None) -> ChatResponse:
         body: dict[str, Any] = {
             "model": self.default_model,
             "messages": req.messages,
@@ -96,6 +96,7 @@ class ChatClient:
             f"{self.base_url}/chat/completions",
             headers,
             body,
+            self.max_retries if retries is None else retries,
         )
         parsed = _parse_response(response, self.default_model)
         if req.json_object:
@@ -111,9 +112,10 @@ class ChatClient:
         url: str,
         headers: dict[str, str],
         body: dict[str, Any],
+        max_retries: int,
     ) -> dict:
         last_error: Exception | None = None
-        attempts = self.max_retries + 1
+        attempts = max_retries + 1
         for attempt in range(attempts):
             try:
                 status, response_json = self._transport(method, url, headers, body, self.timeout)

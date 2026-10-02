@@ -76,7 +76,7 @@ class Decision:
 
 @dataclass
 class Reservation:
-    calls: int = 1
+    calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
     images: int = 0
@@ -87,9 +87,13 @@ class RunBudget:
     family: str
     limits: dict
     used: Reservation = field(default_factory=Reservation)
+    blocked: bool = False
+    events: list = field(default_factory=list)
 
     def reserve(self, item: Reservation) -> str | None:
         """Check each limit on its own. Return the first limit that does not fit."""
+        if self.blocked:
+            return "blocked"
         pending = {
             "calls": self.used.calls + item.calls,
             "input_tokens": self.used.input_tokens + item.input_tokens,
@@ -105,6 +109,29 @@ class RunBudget:
             output_tokens=pending["output_tokens"],
             images=pending["images"],
         )
+        return None
+
+    def settle(self, reserved: Reservation, observed: Reservation | None, *, timeout: bool = False) -> dict | None:
+        """Missing usage or a timeout keeps the reservation. An overrun is stored unclipped and blocks the run."""
+        if observed is None or timeout:
+            return None
+        input_delta = observed.input_tokens - reserved.input_tokens
+        output_delta = observed.output_tokens - reserved.output_tokens
+        self.used = Reservation(
+            calls=self.used.calls,
+            input_tokens=self.used.input_tokens + input_delta,
+            output_tokens=self.used.output_tokens + output_delta,
+            images=self.used.images,
+        )
+        if input_delta > 0 or output_delta > 0:
+            self.blocked = True
+            event = {
+                "event": "overrun",
+                "input_tokens": observed.input_tokens,
+                "output_tokens": observed.output_tokens,
+            }
+            self.events.append(event)
+            return event
         return None
 
 

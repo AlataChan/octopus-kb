@@ -119,7 +119,7 @@ def test_inactive_revision_is_hidden_after_replacement_and_redaction(
 
     captured: list[str] = []
 
-    def _capture(self, req):
+    def _capture(self, req, **_kwargs):
         captured.append(json.dumps(req.messages))
         raise LLMError("stop-before-network")
 

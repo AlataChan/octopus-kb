@@ -19,6 +19,7 @@ from pathlib import Path
 
 
 MANAGED_DIR = ".octopus-kb"
+_REVISION_TREES = {"activations", "revisions", "staging"}
 
 
 class VaultRootError(Exception):
@@ -81,6 +82,15 @@ def resolve_vault_id(vault_id: str) -> ConfiguredVault:
 def is_managed_path(path: str | Path) -> bool:
     """True when ``path`` is the managed tree or a file inside it."""
     return MANAGED_DIR in Path(path).parts
+
+
+def is_revision_tree(path: str | Path) -> bool:
+    """True for activation, revision, and staging leaves, not scratch files."""
+    parts = Path(path).parts
+    if MANAGED_DIR not in parts:
+        return False
+    index = parts.index(MANAGED_DIR)
+    return len(parts) > index + 1 and parts[index + 1] in _REVISION_TREES
 
 
 def vault_relative(root: str | Path, candidate: str | Path) -> str:

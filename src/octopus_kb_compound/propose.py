@@ -27,17 +27,20 @@ from octopus_kb_compound.active import load_view
 from octopus_kb_compound.resolver import (
     VaultRootError,
     deployment_tenant,
-    is_managed_path,
+    is_revision_tree,
     require_inside,
     resolve_vault,
     vault_relative,
 )
 from octopus_kb_compound.frontmatter import parse_document
+from octopus_kb_compound import llm as llm_mod
 from octopus_kb_compound.llm import (
     ChatClient,
     ChatRequest,
     LLMError,
     LLMInvalidOutputError,
+    LLMNetworkError,
+    LLMRateLimitError,
 )
 from octopus_kb_compound.proposals import save_proposal, validate_proposal_dict
 from octopus_kb_compound.retrieve import build_retrieval_bundle
@@ -91,7 +94,7 @@ def propose_from_raw(
     _validate_inputs(source, root)
 
     relative = vault_relative(root, source)
-    if is_managed_path(relative):
+    if is_revision_tree(relative):
         pinned = load_view(root).text_by_path.get(relative)
         if pinned is None:
             raise VaultRootError("inactive_revision")
@@ -278,21 +281,54 @@ def _controlled_send(
         decision.accounting or {},
     )
     output_allowance = 4000
-    exceeded = budget.reserve(Reservation(calls=1, input_tokens=measured, output_tokens=output_allowance, images=0))
-    if exceeded is not None:
-        _defer(vault, "oversized_prompt", measured + output_allowance, source_path)
-    try:
-        response = client.chat(
-            ChatRequest(
-                messages=redacted,
-                json_object=True,
-                temperature=0.1,
-                max_tokens=output_allowance,
-            )
-        )
-    except LLMInvalidOutputError as exc:
-        return str(exc), key, False
-    return response.content, key, False
+    reservation = Reservation(calls=1, input_tokens=measured, output_tokens=output_allowance, images=0)
+    request = ChatRequest(
+        messages=redacted,
+        json_object=True,
+        temperature=0.1,
+        max_tokens=output_allowance,
+    )
+    attempts = client.max_retries + 1
+    last_error: LLMError | None = None
+    for attempt in range(attempts):
+        exceeded = budget.reserve(reservation)
+        if exceeded is not None:
+            if last_error is not None:
+                raise last_error
+            reason = "oversized_prompt" if exceeded in {"input_tokens", "output_tokens", "images"} else "budget_exhausted"
+            _defer(vault, reason, measured + output_allowance, source_path)
+        try:
+            response = client.chat(request, retries=0)
+        except LLMInvalidOutputError as exc:
+            budget.settle(reservation, None)
+            return str(exc), key, False
+        except (LLMRateLimitError, LLMNetworkError) as exc:
+            budget.settle(reservation, None, timeout=True)
+            last_error = exc
+            if attempt == attempts - 1:
+                raise
+            llm_mod._sleep(llm_mod._retry_delay(attempt))
+            continue
+        except LLMError:
+            budget.settle(reservation, None, timeout=True)
+            raise
+        budget.settle(reservation, _observed_usage(response, reservation))
+        return response.content, key, False
+    if last_error is not None:
+        raise last_error
+    raise LLMError("LLM request failed")
+
+
+def _observed_usage(response, reserved: Reservation) -> Reservation | None:
+    """Provider token counts, or None when the response did not report usage."""
+    if response.input_tokens is None and response.output_tokens is None:
+        return None
+    return Reservation(
+        calls=1,
+        input_tokens=int(response.input_tokens or 0),
+        output_tokens=int(response.output_tokens or 0),
+        images=reserved.images,
+    )
 
 
 def _defer(vault: Path, reason: str, measured_size: int, source_path: str) -> None:

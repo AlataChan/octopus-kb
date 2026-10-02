@@ -21,7 +21,7 @@ from octopus_kb_compound.links import build_alias_index, normalize_page_name
 from octopus_kb_compound.models import PageRecord, VaultProfile
 from octopus_kb_compound.profile import load_vault_profile
 from octopus_kb_compound.active import UNLEDGERED, load_view
-from octopus_kb_compound.resolver import VaultRootError, contained_leaf, is_managed_path, require_inside, vault_relative
+from octopus_kb_compound.resolver import VaultRootError, contained_leaf, is_revision_tree, require_inside, vault_relative
 
 
 class ObsidianStore:
@@ -93,7 +93,7 @@ class ObsidianStore:
         pinned = self.view().text_by_path.get(relative)
         if pinned is not None:
             return pinned
-        if is_managed_path(relative) or is_managed_path(locator):
+        if is_revision_tree(relative) or is_revision_tree(locator):
             raise VaultRootError("inactive_revision")
         return contained_leaf(self.root, target).read_text(encoding="utf-8", errors="replace")
 
