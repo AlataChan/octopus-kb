@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
+from octopus_kb_compound.resolver import require_mcp_mapping
+
 from . import tools
 
 mcp = FastMCP("octopus-kb")
@@ -48,6 +50,7 @@ def kb_validate(vault: str, proposal_path: str, apply: bool = False) -> dict:
 
 
 def main() -> None:
+    require_mcp_mapping()
     mcp.run(transport="stdio")
 
 

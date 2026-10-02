@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -70,6 +71,25 @@ def configured_vaults() -> dict[str, ConfiguredVault] | None:
             raise VaultRootError("vaults_unconfigured")
         table[vault_id] = ConfiguredVault(vault_id, Path(root).resolve(), tuple(labels))
     return table
+
+
+def require_mcp_mapping() -> None:
+    """MCP serving needs a vault map. The CLI does not call this."""
+    if configured_vaults() is not None:
+        return
+    if os.environ.get("OCTOPUS_KB_ALLOW_UNMAPPED") == "1":
+        warnings.warn(
+            "OCTOPUS_KB_VAULTS is unset; MCP is serving because OCTOPUS_KB_ALLOW_UNMAPPED=1",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return
+    warnings.warn(
+        "OCTOPUS_KB_VAULTS is unset; refusing to serve MCP tools",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    raise SystemExit(2)
 
 
 def resolve_vault_id(vault_id: str) -> ConfiguredVault:
