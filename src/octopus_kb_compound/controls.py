@@ -267,7 +267,16 @@ class InterpretationStore:
         with _lock(self.root):
             return self._lookup_unlocked(key)
 
-    def publish(self, key: str, response_text: str) -> str:
+    def publish(
+        self,
+        key: str,
+        response_text: str,
+        *,
+        provenance: str = "",
+        request_digest_hex: str = "",
+        attempt: int = 1,
+        served_model: str = "",
+    ) -> str:
         """Return the winning text. A missing record is replaced and linked."""
         with _lock(self.root):
             current = _read_json(self._index(key))
@@ -284,6 +293,10 @@ class InterpretationStore:
                 "accepted": True,
                 "response_text": response_text,
                 "regenerated_from": regenerated_from,
+                "provenance": provenance,
+                "request_digest": request_digest_hex,
+                "attempt": attempt,
+                "served_model": served_model,
             }
             directory = self.root / "records"
             directory.mkdir(parents=True, exist_ok=True)
@@ -314,6 +327,45 @@ class InterpretationStore:
                     os.close(fd)
                 tmp_path.unlink(missing_ok=True)
             return response_text
+
+    def read_winner(self, key: str) -> dict | None:
+        with _lock(self.root):
+            current = _read_json(self._index(key))
+            if not current or not current.get("record_id"):
+                return None
+            record = self._read_record(str(current["record_id"]))
+            if record is None or record.get("accepted") is not True:
+                return None
+            return record
+
+    def record_attempt(
+        self,
+        key: str,
+        *,
+        provenance: str,
+        request_digest_hex: str,
+        attempt: int,
+        served_model: str,
+        reason: str,
+    ) -> str:
+        """Content-free diagnosis for one send. Not a replay winner."""
+        record_id = uuid.uuid4().hex
+        record = {
+            "kind": "attempt",
+            "record_id": record_id,
+            "key": key,
+            "accepted": False,
+            "reason": reason,
+            "provenance": provenance,
+            "request_digest": request_digest_hex,
+            "attempt": attempt,
+            "served_model": served_model,
+        }
+        with _lock(self.root):
+            directory = self.root / "records"
+            directory.mkdir(parents=True, exist_ok=True)
+            _write_exclusive(directory / f"{record_id}.json", record)
+        return record_id
 
     def _lookup_unlocked(self, key: str) -> str | ReplayUnavailable | None:
         current = _read_json(self._index(key))

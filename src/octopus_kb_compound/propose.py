@@ -65,6 +65,16 @@ class ProposeDeferred(ProposeRuntimeError):
 
 
 @dataclass(frozen=True)
+class _Send:
+    content: str
+    key: str
+    replayed: bool
+    base_digest: str
+    attempt_digest: str
+    served_model: str
+
+
+@dataclass(frozen=True)
 class ProposeResult:
     proposal_id: str
     path: str
@@ -130,12 +140,13 @@ def propose_from_raw(
     )
 
     client = ChatClient(**profile.as_client_kwargs())
+    source_provenance = provenance or raw_rel_path
     try:
-        proposal, raw_response, response_key, replayed = _request_proposal_json(
+        proposal, raw_response, response_key, replayed, producing_attempt, base_digest, served_model = _request_proposal_json(
             client,
             prompt,
             root,
-            provenance=provenance or raw_rel_path,
+            provenance=source_provenance,
             prompt_digest=prompt_sha,
             endpoint=profile.base_url,
             model=profile.model,
@@ -172,7 +183,14 @@ def propose_from_raw(
         raise ProposeRuntimeError("proposal schema invalid")
 
     if not replayed:
-        stored = InterpretationStore(root).publish(response_key, raw_response)
+        stored = InterpretationStore(root).publish(
+            response_key,
+            raw_response,
+            provenance=source_provenance,
+            request_digest_hex=base_digest,
+            attempt=producing_attempt,
+            served_model=served_model,
+        )
         if stored != raw_response:
             proposal = json.loads(stored)
             raw_response = stored
@@ -216,16 +234,19 @@ def _request_proposal_json(
     prompt_digest: str,
     endpoint: str,
     model: str,
-) -> tuple[Any, str, str, bool]:
-    messages = [{"role": "user", "content": prompt}]
+) -> tuple[Any, str, str, bool, int, str, str]:
+    base_messages = [{"role": "user", "content": prompt}]
+    messages = list(base_messages)
     budget = load_budget()
     policy = load_policy()
     last_output = ""
     response_format = {"type": "json_object"}
+    store = InterpretationStore(vault)
     for attempt in range(1, 3):
-        content, response_key, replayed = _controlled_send(
+        sent = _controlled_send(
             client,
             messages,
+            cache_messages=base_messages,
             vault=vault,
             budget=budget,
             policy=policy,
@@ -236,14 +257,35 @@ def _request_proposal_json(
             response_format=response_format,
             source_path=provenance,
         )
-        last_output = content
-        try:
-            if replayed or content:
-                return json.loads(content), content, response_key, replayed
-        except json.JSONDecodeError as exc:
-            last_output = str(exc)
+        if sent.replayed:
+            return json.loads(sent.content), sent.content, sent.key, True, attempt, sent.base_digest, sent.served_model
+        parsed = _UNPARSED
+        if sent.content:
+            try:
+                parsed = json.loads(sent.content)
+            except json.JSONDecodeError as exc:
+                last_output = str(exc)
+        if parsed is not _UNPARSED:
+            store.record_attempt(
+                sent.key,
+                provenance=provenance,
+                request_digest_hex=sent.attempt_digest,
+                attempt=attempt,
+                served_model=sent.served_model,
+                reason="accepted",
+            )
+            return parsed, sent.content, sent.key, False, attempt, sent.base_digest, sent.served_model
+        store.record_attempt(
+            sent.key,
+            provenance=provenance,
+            request_digest_hex=sent.attempt_digest,
+            attempt=attempt,
+            served_model=sent.served_model,
+            reason="non_json",
+        )
+        last_output = last_output or sent.content
         if attempt == 1:
-            messages.append({"role": "user", "content": _retry_schema_reminder()})
+            messages = [*base_messages, {"role": "user", "content": _retry_schema_reminder()}]
             continue
         _write_rejection(
             vault,
@@ -258,6 +300,7 @@ def _controlled_send(
     client: ChatClient,
     messages: list[dict],
     *,
+    cache_messages: list[dict],
     vault: Path,
     budget,
     policy,
@@ -267,27 +310,46 @@ def _controlled_send(
     model: str,
     response_format: dict,
     source_path: str,
-) -> tuple[str, str, bool]:
-    decision = policy.apply(endpoint=endpoint, model=model, texts=[str(item["content"]) for item in messages])
-    if not decision.allowed:
-        _defer(vault, decision.disposition, 0, source_path)
-    redacted = [
-        {"role": item["role"], "content": text}
-        for item, text in zip(messages, decision.texts, strict=True)
-    ]
-    digest = request_digest(redacted, response_format)
-    key = interpretation_key(
-        tenant=deployment_tenant(),
-        provenance=provenance,
+) -> _Send:
+    base = _bind_request(
+        policy,
         endpoint=endpoint,
         model=model,
-        prompt_version_digest=prompt_digest,
-        request_digest_hex=digest,
-        policy_digest=policy.digest,
+        messages=cache_messages,
+        provenance=provenance,
+        prompt_digest=prompt_digest,
+        response_format=response_format,
     )
-    cached = InterpretationStore(vault).lookup(key)
+    if not base.decision.allowed:
+        _defer(vault, base.decision.disposition, 0, source_path)
+    store = InterpretationStore(vault)
+    cached = store.lookup(base.key)
     if isinstance(cached, str):
-        return cached, key, True
+        winner = store.read_winner(base.key)
+        return _Send(
+            cached,
+            base.key,
+            True,
+            base.digest,
+            base.digest,
+            str(winner.get("served_model") or "") if winner else "",
+        )
+    if messages == cache_messages:
+        bound = base
+    else:
+        bound = _bind_request(
+            policy,
+            endpoint=endpoint,
+            model=model,
+            messages=messages,
+            provenance=provenance,
+            prompt_digest=prompt_digest,
+            response_format=response_format,
+        )
+        if not bound.decision.allowed:
+            _defer(vault, bound.decision.disposition, 0, source_path)
+    redacted = bound.redacted
+    decision = bound.decision
     measured = accounted_input(
         [item["content"] for item in redacted],
         response_format,
@@ -315,7 +377,7 @@ def _controlled_send(
             response = client.chat(request, retries=0)
         except LLMInvalidOutputError as exc:
             budget.settle(reservation, None)
-            return str(exc), key, False
+            return _Send(str(exc), base.key, False, base.digest, bound.digest, "")
         except (LLMRateLimitError, LLMNetworkError) as exc:
             budget.settle(reservation, None, timeout=True)
             last_error = exc
@@ -329,10 +391,55 @@ def _controlled_send(
         budget.settle(reservation, _observed_usage(response, reservation))
         if response.model != model:
             raise LLMError("served_model_mismatch")
-        return response.content, key, False
+        return _Send(response.content, base.key, False, base.digest, bound.digest, response.model)
     if last_error is not None:
         raise last_error
     raise LLMError("LLM request failed")
+
+
+@dataclass(frozen=True)
+class _Bound:
+    decision: Any
+    redacted: list[dict]
+    digest: str
+    key: str
+
+
+_UNPARSED = object()
+
+
+def _bind_request(
+    policy,
+    *,
+    endpoint: str,
+    model: str,
+    messages: list[dict],
+    provenance: str,
+    prompt_digest: str,
+    response_format: dict,
+) -> _Bound:
+    decision = policy.apply(
+        endpoint=endpoint,
+        model=model,
+        texts=[str(item["content"]) for item in messages],
+    )
+    if not decision.allowed:
+        return _Bound(decision, [], "", "")
+    redacted = [
+        {"role": item["role"], "content": text}
+        for item, text in zip(messages, decision.texts, strict=True)
+    ]
+    digest = request_digest(redacted, response_format)
+    key = interpretation_key(
+        tenant=deployment_tenant(),
+        provenance=provenance,
+        endpoint=endpoint,
+        model=model,
+        prompt_version_digest=prompt_digest,
+        request_digest_hex=digest,
+        policy_digest=policy.digest,
+    )
+    return _Bound(decision, redacted, digest, key)
 
 
 def _observed_usage(response, reserved: Reservation) -> Reservation | None:
