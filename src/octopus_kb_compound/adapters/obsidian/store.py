@@ -31,10 +31,10 @@ class ObsidianStore:
     audit contracts remain stable while callers migrate to CKR operations.
     """
 
-    def __init__(self, root: str | Path, profile: VaultProfile | None = None):
+    def __init__(self, root: str | Path, profile: VaultProfile | None = None, view=None):
         self.root = Path(root)
         self.profile = profile or load_vault_profile(self.root)
-        self._view = None
+        self._view = view
 
     def list_pages(self) -> list[CanonicalPage]:
         return [

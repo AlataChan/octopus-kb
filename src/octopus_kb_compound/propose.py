@@ -24,6 +24,7 @@ from octopus_kb_compound.controls import (
     request_digest,
 )
 from octopus_kb_compound.active import load_view
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound.resolver import (
     VaultRootError,
     deployment_tenant,
@@ -104,8 +105,9 @@ def propose_from_raw(
     _validate_inputs(source, root)
 
     relative = vault_relative(root, source)
+    view = load_view(root)
     if is_revision_tree(relative):
-        pinned = load_view(root).text_by_path.get(relative)
+        pinned = view.text_by_path.get(relative)
         if pinned is None:
             raise VaultRootError("inactive_revision")
         raw_bytes = pinned.encode("utf-8")
@@ -128,7 +130,7 @@ def propose_from_raw(
     prompt_bytes = prompt_path.read_bytes()
     prompt_sha = hashlib.sha256(prompt_bytes).hexdigest()
     prompt_template = prompt_bytes.decode("utf-8")
-    existing_bundle = build_retrieval_bundle(root, raw_title).to_dict()
+    existing_bundle = build_retrieval_bundle(root, raw_title, store=ObsidianStore(root, view=view)).to_dict()
     prompt = _render_template(
         prompt_template,
         {
