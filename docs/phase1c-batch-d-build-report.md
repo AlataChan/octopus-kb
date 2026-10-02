@@ -14,7 +14,7 @@ reimplemented here. Nothing imports the parser.
 | S6 `kb_ingest_envelope`, staging, transition table, fsync | `1a2ba33` | `tests/test_phase1c_approvals.py`, `tests/test_phase1c_envelope.py`, `tests/test_mcp_contract_snapshot.py` |
 | S6 active-aware reads and read-time provenance | `98ce708` | `tests/test_phase1c_reads.py` |
 | S7 propose policy, replay, budget, deferral | `8342ff7` | `tests/test_phase1c_controls.py` |
-| This report | this commit | none |
+| This report | the `docs:` commit that adds this file | none |
 
 ## Config formats
 
