@@ -1,0 +1,15 @@
+---
+title: "Golden Source"
+type: raw_source
+lang: zh
+role: raw_source
+layer: source
+tags:
+  - "golden"
+ingest_method: "alata"
+summary: |
+  Fixed body.
+---
+# Golden Source
+
+Fixed body.

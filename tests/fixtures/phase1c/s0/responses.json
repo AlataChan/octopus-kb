@@ -1,0 +1,655 @@
+{
+  "mcp": {
+    "export": {
+      "nodes": [
+        {
+          "id": "page:AGENTS.md",
+          "title": "AGENTS",
+          "type": "meta",
+          "role": "schema",
+          "layer": "wiki",
+          "aliases": []
+        },
+        {
+          "id": "page:raw/example-source.md",
+          "title": "Example Source",
+          "type": "raw_source",
+          "role": "raw_source",
+          "layer": "source",
+          "aliases": []
+        },
+        {
+          "id": "page:wiki/INDEX.md",
+          "title": "INDEX",
+          "type": "meta",
+          "role": "index",
+          "layer": "wiki",
+          "aliases": []
+        },
+        {
+          "id": "page:wiki/LOG.md",
+          "title": "LOG",
+          "type": "meta",
+          "role": "log",
+          "layer": "wiki",
+          "aliases": []
+        },
+        {
+          "id": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "title": "RAG and Knowledge Augmentation",
+          "type": "concept",
+          "role": "concept",
+          "layer": "wiki",
+          "aliases": [
+            "RAG",
+            "retrieval augmented generation"
+          ]
+        },
+        {
+          "id": "page:wiki/entities/Chunking.md",
+          "title": "Chunking",
+          "type": "entity",
+          "role": "entity",
+          "layer": "wiki",
+          "aliases": []
+        },
+        {
+          "id": "page:wiki/entities/Vector Store.md",
+          "title": "Vector Store",
+          "type": "entity",
+          "role": "entity",
+          "layer": "wiki",
+          "aliases": [
+            "Vector Database"
+          ]
+        },
+        {
+          "id": "alias:rag",
+          "title": "RAG",
+          "type": "alias",
+          "role": null,
+          "layer": null,
+          "aliases": []
+        },
+        {
+          "id": "alias:retrievalaugmentedgeneration",
+          "title": "retrieval augmented generation",
+          "type": "alias",
+          "role": null,
+          "layer": null,
+          "aliases": []
+        },
+        {
+          "id": "alias:vectordatabase",
+          "title": "Vector Database",
+          "type": "alias",
+          "role": null,
+          "layer": null,
+          "aliases": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/entities/Vector Store.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/entities/Chunking.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/LOG.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/LOG.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/LOG.md",
+          "target": "page:wiki/entities/Vector Store.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/LOG.md",
+          "target": "page:wiki/entities/Chunking.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "target": "page:wiki/INDEX.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "target": "page:wiki/entities/Vector Store.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "target": "page:wiki/entities/Chunking.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "alias:rag",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "relation_type": "alias"
+        },
+        {
+          "source": "alias:retrievalaugmentedgeneration",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "relation_type": "alias"
+        },
+        {
+          "source": "page:wiki/entities/Chunking.md",
+          "target": "page:wiki/INDEX.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/entities/Chunking.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/entities/Chunking.md",
+          "target": "page:wiki/entities/Vector Store.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/entities/Vector Store.md",
+          "target": "page:wiki/INDEX.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/entities/Vector Store.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "page:wiki/entities/Vector Store.md",
+          "target": "page:wiki/entities/Chunking.md",
+          "relation_type": "wikilink"
+        },
+        {
+          "source": "alias:vectordatabase",
+          "target": "page:wiki/entities/Vector Store.md",
+          "relation_type": "alias"
+        }
+      ]
+    },
+    "retrieve": {
+      "query": "RAG",
+      "items": [
+        {
+          "path": "AGENTS.md",
+          "title": "AGENTS",
+          "reason": "bundle",
+          "text": "---\ntitle: \"AGENTS\"\ntype: meta\nlang: en\nrole: schema\nlayer: wiki\ntags:\n  - AI/Wiki\nsummary: |\n  Example schema for retrieval and maintenance in the minimal vault.\n---\n\n# Example Vault Schema\n\nThis schema defines how the LLM should operate on the vault.\n\n## Retrieval\n\nAlways read:\n\n1. `wiki/INDEX.md`\n2. relevant `wiki/concepts/*.md`\n3. raw sources only for verification\n\n## Maintenance\n\n- Keep raw sources immutable\n- Update concept pages before creating duplicates\n- Add wikilinks to canonical pages\n- Update `wiki/INDEX.md` when a durable page is added\n- Run lint after meaningful edits\n",
+          "tokenEstimate": 148
+        },
+        {
+          "path": "wiki/INDEX.md",
+          "title": "INDEX",
+          "reason": "bundle",
+          "text": "---\ntitle: \"INDEX\"\ntype: meta\nlang: en\nrole: index\nlayer: wiki\ntags:\n  - AI/Wiki\nsummary: |\n  Entry point for the example vault.\n---\n\n# INDEX\n\n- [[RAG and Knowledge Augmentation]]: retrieval, chunking, and graph-based knowledge support\n- [[Vector Store]]: canonical storage primitive used by many RAG systems\n- [[Chunking]]: segmentation policy that shapes retrieval quality\n- [[LOG]]: maintenance history for durable wiki updates\n",
+          "tokenEstimate": 108
+        },
+        {
+          "path": "wiki/concepts/RAG and Knowledge Augmentation.md",
+          "title": "RAG and Knowledge Augmentation",
+          "reason": "title_match",
+          "text": "---\ntitle: \"RAG and Knowledge Augmentation\"\ntype: concept\nlang: en\nrole: concept\nlayer: wiki\ntags:\n  - AI/LLM/RAG\n  - AI/LLM/RAG/Retrieval\nsummary: |\n  RAG combines retrieval with generation and benefits from strong chunking, indexing, and evidence handling.\naliases:\n  - \"RAG\"\n  - \"retrieval augmented generation\"\n---\n\n# RAG and Knowledge Augmentation\n\nSee [[INDEX]], [[Vector Store]], and [[Chunking]].\n\nRAG is not just retrieval. It is a structured evidence path from raw sources into answer synthesis.\n\nIn this minimal vault, [[Chunking]] defines segment quality, [[Vector Store]] anchors retrieval infrastructure, and `raw/example-source.md` remains the underlying evidence layer.\n",
+          "tokenEstimate": 172
+        },
+        {
+          "path": "wiki/entities/Chunking.md",
+          "title": "Chunking",
+          "reason": "backlink",
+          "text": "---\ntitle: \"Chunking\"\ntype: entity\nlang: en\nrole: entity\nlayer: wiki\ntags:\n  - AI/LLM/RAG\n  - AI/LLM/RAG/Chunking\nsummary: |\n  Chunking defines how source material is segmented before indexing and strongly affects retrieval quality.\n---\n\n# Chunking\n\nSee [[INDEX]] and [[RAG and Knowledge Augmentation]].\n\nChunking controls segment boundaries before documents enter a [[Vector Store]]. Weak chunking increases retrieval noise and lowers answer quality.\n",
+          "tokenEstimate": 113
+        },
+        {
+          "path": "wiki/entities/Vector Store.md",
+          "title": "Vector Store",
+          "reason": "backlink",
+          "text": "---\ntitle: \"Vector Store\"\ntype: entity\nlang: en\nrole: entity\nlayer: wiki\ntags:\n  - AI/LLM/RAG\n  - AI/LLM/RAG/Vector-Stores\nsummary: |\n  Vector stores persist embeddings for similarity search and are common building blocks in RAG systems.\naliases:\n  - \"Vector Database\"\n---\n\n# Vector Store\n\nSee [[INDEX]] and [[RAG and Knowledge Augmentation]].\n\nA vector store is a persistence layer for embeddings. It is useful when [[Chunking]] and retrieval pipelines need fast nearest-neighbor lookup over document segments.\n",
+          "tokenEstimate": 128
+        },
+        {
+          "path": "raw/example-source.md",
+          "title": "Example Source",
+          "reason": "backlink",
+          "text": "---\ntitle: \"Example Source\"\ntype: raw_source\nlang: en\nrole: raw_source\nlayer: source\ntags: []\nsummary: |\n  Minimal raw source used for CLI smoke checks.\n---\n\n# Example Source\n\nThis source explains retrieval augmented generation and chunking trade-offs.\n",
+          "tokenEstimate": 64
+        }
+      ],
+      "warnings": [],
+      "tokenEstimate": 733,
+      "next": [
+        "octopus-kb impacted-pages \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\""
+      ]
+    },
+    "lookup": {
+      "term": "RAG",
+      "canonical": {
+        "path": "wiki/concepts/RAG and Knowledge Augmentation.md",
+        "title": "RAG and Knowledge Augmentation",
+        "source_of_truth": null
+      },
+      "aliases": [
+        {
+          "text": "RAG",
+          "resolves_to": "wiki/concepts/RAG and Knowledge Augmentation.md"
+        }
+      ],
+      "ambiguous": false,
+      "collisions": [],
+      "next": [
+        "octopus-kb retrieve-bundle \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\" --json",
+        "octopus-kb neighbors \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\" --json"
+      ]
+    },
+    "neighbors": {
+      "page": "wiki/concepts/RAG and Knowledge Augmentation.md",
+      "inbound": [
+        {
+          "path": "wiki/INDEX.md",
+          "via": "wikilink",
+          "count": 1
+        },
+        {
+          "path": "wiki/LOG.md",
+          "via": "wikilink",
+          "count": 1
+        },
+        {
+          "path": "wiki/entities/Chunking.md",
+          "via": "wikilink",
+          "count": 1
+        },
+        {
+          "path": "wiki/entities/Vector Store.md",
+          "via": "wikilink",
+          "count": 1
+        }
+      ],
+      "outbound": [
+        {
+          "path": "wiki/INDEX.md",
+          "via": "wikilink"
+        },
+        {
+          "path": "wiki/entities/Chunking.md",
+          "via": "wikilink"
+        },
+        {
+          "path": "wiki/entities/Vector Store.md",
+          "via": "wikilink"
+        }
+      ],
+      "aliases": [
+        "RAG",
+        "retrieval augmented generation"
+      ],
+      "canonical_identity": "rag and knowledge augmentation",
+      "next": [
+        "octopus-kb impacted-pages \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\" --json"
+      ]
+    },
+    "ingest": {
+      "path": "raw/golden-source.md"
+    }
+  },
+  "cli": {
+    "lookup": {
+      "term": "RAG",
+      "canonical": {
+        "path": "wiki/concepts/RAG and Knowledge Augmentation.md",
+        "title": "RAG and Knowledge Augmentation",
+        "source_of_truth": null
+      },
+      "aliases": [
+        {
+          "text": "RAG",
+          "resolves_to": "wiki/concepts/RAG and Knowledge Augmentation.md"
+        }
+      ],
+      "ambiguous": false,
+      "collisions": [],
+      "next": [
+        "octopus-kb retrieve-bundle \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\" --json",
+        "octopus-kb neighbors \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\" --json"
+      ]
+    },
+    "retrieve": {
+      "query": "RAG",
+      "bundle": {
+        "schema": [
+          "AGENTS.md"
+        ],
+        "index": [
+          "wiki/INDEX.md"
+        ],
+        "concepts": [
+          {
+            "path": "wiki/concepts/RAG and Knowledge Augmentation.md",
+            "title": "RAG and Knowledge Augmentation",
+            "reason": "title_match"
+          }
+        ],
+        "entities": [
+          {
+            "path": "wiki/entities/Chunking.md",
+            "title": "Chunking",
+            "reason": "backlink"
+          },
+          {
+            "path": "wiki/entities/Vector Store.md",
+            "title": "Vector Store",
+            "reason": "backlink"
+          }
+        ],
+        "raw_sources": [
+          {
+            "path": "raw/example-source.md",
+            "title": "Example Source",
+            "reason": "backlink"
+          }
+        ]
+      },
+      "warnings": [],
+      "token_estimate": 731,
+      "next": [
+        "octopus-kb impacted-pages \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\""
+      ]
+    },
+    "neighbors": {
+      "page": "wiki/concepts/RAG and Knowledge Augmentation.md",
+      "inbound": [
+        {
+          "path": "wiki/INDEX.md",
+          "via": "wikilink",
+          "count": 1
+        },
+        {
+          "path": "wiki/LOG.md",
+          "via": "wikilink",
+          "count": 1
+        },
+        {
+          "path": "wiki/entities/Chunking.md",
+          "via": "wikilink",
+          "count": 1
+        },
+        {
+          "path": "wiki/entities/Vector Store.md",
+          "via": "wikilink",
+          "count": 1
+        }
+      ],
+      "outbound": [
+        {
+          "path": "wiki/INDEX.md",
+          "via": "wikilink"
+        },
+        {
+          "path": "wiki/entities/Chunking.md",
+          "via": "wikilink"
+        },
+        {
+          "path": "wiki/entities/Vector Store.md",
+          "via": "wikilink"
+        }
+      ],
+      "aliases": [
+        "RAG",
+        "retrieval augmented generation"
+      ],
+      "canonical_identity": "rag and knowledge augmentation",
+      "next": [
+        "octopus-kb impacted-pages \"wiki/concepts/RAG and Knowledge Augmentation.md\" --vault \"{vault}\" --json"
+      ]
+    },
+    "lint_rc": 0,
+    "lint": {
+      "findings": []
+    },
+    "export": {
+      "nodes.json": [
+        {
+          "aliases": [],
+          "id": "page:AGENTS.md",
+          "layer": "wiki",
+          "role": "schema",
+          "title": "AGENTS",
+          "type": "meta"
+        },
+        {
+          "aliases": [],
+          "id": "page:raw/example-source.md",
+          "layer": "source",
+          "role": "raw_source",
+          "title": "Example Source",
+          "type": "raw_source"
+        },
+        {
+          "aliases": [],
+          "id": "page:wiki/INDEX.md",
+          "layer": "wiki",
+          "role": "index",
+          "title": "INDEX",
+          "type": "meta"
+        },
+        {
+          "aliases": [],
+          "id": "page:wiki/LOG.md",
+          "layer": "wiki",
+          "role": "log",
+          "title": "LOG",
+          "type": "meta"
+        },
+        {
+          "aliases": [
+            "RAG",
+            "retrieval augmented generation"
+          ],
+          "id": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "layer": "wiki",
+          "role": "concept",
+          "title": "RAG and Knowledge Augmentation",
+          "type": "concept"
+        },
+        {
+          "aliases": [],
+          "id": "page:wiki/entities/Chunking.md",
+          "layer": "wiki",
+          "role": "entity",
+          "title": "Chunking",
+          "type": "entity"
+        },
+        {
+          "aliases": [
+            "Vector Database"
+          ],
+          "id": "page:wiki/entities/Vector Store.md",
+          "layer": "wiki",
+          "role": "entity",
+          "title": "Vector Store",
+          "type": "entity"
+        },
+        {
+          "aliases": [],
+          "id": "alias:rag",
+          "layer": null,
+          "role": null,
+          "title": "RAG",
+          "type": "alias"
+        },
+        {
+          "aliases": [],
+          "id": "alias:retrievalaugmentedgeneration",
+          "layer": null,
+          "role": null,
+          "title": "retrieval augmented generation",
+          "type": "alias"
+        },
+        {
+          "aliases": [],
+          "id": "alias:vectordatabase",
+          "layer": null,
+          "role": null,
+          "title": "Vector Database",
+          "type": "alias"
+        }
+      ],
+      "edges.json": [
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/entities/Vector Store.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/entities/Chunking.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/INDEX.md",
+          "target": "page:wiki/LOG.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/LOG.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/LOG.md",
+          "target": "page:wiki/entities/Vector Store.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/LOG.md",
+          "target": "page:wiki/entities/Chunking.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "target": "page:wiki/INDEX.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "target": "page:wiki/entities/Vector Store.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/concepts/RAG and Knowledge Augmentation.md",
+          "target": "page:wiki/entities/Chunking.md"
+        },
+        {
+          "relation_type": "alias",
+          "source": "alias:rag",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md"
+        },
+        {
+          "relation_type": "alias",
+          "source": "alias:retrievalaugmentedgeneration",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/entities/Chunking.md",
+          "target": "page:wiki/INDEX.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/entities/Chunking.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/entities/Chunking.md",
+          "target": "page:wiki/entities/Vector Store.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/entities/Vector Store.md",
+          "target": "page:wiki/INDEX.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/entities/Vector Store.md",
+          "target": "page:wiki/concepts/RAG and Knowledge Augmentation.md"
+        },
+        {
+          "relation_type": "wikilink",
+          "source": "page:wiki/entities/Vector Store.md",
+          "target": "page:wiki/entities/Chunking.md"
+        },
+        {
+          "relation_type": "alias",
+          "source": "alias:vectordatabase",
+          "target": "page:wiki/entities/Vector Store.md"
+        }
+      ],
+      "manifest.json": {
+        "pages": [
+          "AGENTS.md",
+          "raw/example-source.md",
+          "wiki/INDEX.md",
+          "wiki/LOG.md",
+          "wiki/concepts/RAG and Knowledge Augmentation.md",
+          "wiki/entities/Chunking.md",
+          "wiki/entities/Vector Store.md"
+        ]
+      },
+      "aliases.json": {
+        "agents": "AGENTS",
+        "agentsmd": "AGENTS",
+        "chunking": "Chunking",
+        "chunkingmd": "Chunking",
+        "examplesource": "Example Source",
+        "examplesourcemd": "Example Source",
+        "index": "INDEX",
+        "indexmd": "INDEX",
+        "log": "LOG",
+        "logmd": "LOG",
+        "rag": "RAG and Knowledge Augmentation",
+        "ragandknowledgeaugmentation": "RAG and Knowledge Augmentation",
+        "ragandknowledgeaugmentationmd": "RAG and Knowledge Augmentation",
+        "rawexamplesource": "Example Source",
+        "rawexamplesourcemd": "Example Source",
+        "retrievalaugmentedgeneration": "RAG and Knowledge Augmentation",
+        "vectordatabase": "Vector Store",
+        "vectorstore": "Vector Store",
+        "vectorstoremd": "Vector Store",
+        "wikiconceptsragandknowledgeaugmentation": "RAG and Knowledge Augmentation",
+        "wikiconceptsragandknowledgeaugmentationmd": "RAG and Knowledge Augmentation",
+        "wikientitieschunking": "Chunking",
+        "wikientitieschunkingmd": "Chunking",
+        "wikientitiesvectorstore": "Vector Store",
+        "wikientitiesvectorstoremd": "Vector Store",
+        "wikiindex": "INDEX",
+        "wikiindexmd": "INDEX",
+        "wikilog": "LOG",
+        "wikilogmd": "LOG"
+      }
+    }
+  }
+}
