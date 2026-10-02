@@ -62,7 +62,7 @@ def test_full_loop_propose_validate_apply_creates_page_and_is_idempotent(tmp_pat
     def fake_transport(method, url, headers, json_body, timeout):
         return 200, {
             "choices": [{"message": {"content": json.dumps(proposal_payload)}}],
-            "model": "m",
+            "model": "qwen2.5:7b-instruct",
             "usage": {},
         }
 

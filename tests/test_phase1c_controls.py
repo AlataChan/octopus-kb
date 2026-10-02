@@ -230,7 +230,7 @@ def _proposal(proposal_id: str) -> bytes:
     }
     body = {
         "choices": [{"message": {"content": json.dumps(payload)}}],
-        "model": "m",
+        "model": "qwen2.5:7b-instruct",
         "usage": {},
     }
     return json.dumps(body).encode("utf-8")
@@ -253,7 +253,7 @@ def _install_transport(monkeypatch, responses: list[bytes]):
         if isinstance(payload, dict) and "choices" in payload:
             return 200, payload
         content = payload if isinstance(payload, str) else json.dumps(payload)
-        return 200, {"choices": [{"message": {"content": content}}], "model": "m", "usage": {}}
+        return 200, {"choices": [{"message": {"content": content}}], "model": "qwen2.5:7b-instruct", "usage": {}}
 
     monkeypatch.setattr(llm_mod, "_default_transport", lambda: fake_transport)
     return calls

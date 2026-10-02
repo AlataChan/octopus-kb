@@ -49,7 +49,7 @@ def test_cli_propose_writes_proposal_file_when_llm_returns_valid_json(tmp_path, 
     def fake_transport(method, url, headers, json_body, timeout):
         return 200, {
             "choices": [{"message": {"content": json.dumps(fake_proposal)}}],
-            "model": "m",
+            "model": "qwen2.5:7b-instruct",
             "usage": {},
         }
 
@@ -111,7 +111,7 @@ def test_cli_propose_overrides_llm_provenance_with_local_sha(tmp_path, monkeypat
     def fake_transport(method, url, headers, json_body, timeout):
         return 200, {
             "choices": [{"message": {"content": json.dumps(model_supplied_lies)}}],
-            "model": "m",
+            "model": "qwen2.5:7b-instruct",
             "usage": {},
         }
 
@@ -149,7 +149,7 @@ def test_cli_propose_exits_1_on_persistent_non_json_output(tmp_path, monkeypatch
         calls["n"] += 1
         return 200, {
             "choices": [{"message": {"content": "not json"}}],
-            "model": "m",
+            "model": "qwen2.5:7b-instruct",
             "usage": {},
         }
 

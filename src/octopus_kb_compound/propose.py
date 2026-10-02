@@ -313,6 +313,8 @@ def _controlled_send(
             budget.settle(reservation, None, timeout=True)
             raise
         budget.settle(reservation, _observed_usage(response, reservation))
+        if response.model != model:
+            raise LLMError("served_model_mismatch")
         return response.content, key, False
     if last_error is not None:
         raise last_error
