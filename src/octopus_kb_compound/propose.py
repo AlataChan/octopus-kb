@@ -172,7 +172,21 @@ def propose_from_raw(
         raise ProposeRuntimeError("proposal schema invalid")
 
     if not replayed:
-        InterpretationStore(root).publish(response_key, raw_response)
+        stored = InterpretationStore(root).publish(response_key, raw_response)
+        if stored != raw_response:
+            proposal = json.loads(stored)
+            raw_response = stored
+            proposal["source"] = {
+                "kind": "raw_file",
+                "path": raw_rel_path,
+                "sha256": raw_sha,
+            }
+            proposal["produced_by"] = {
+                "provider_profile": profile_key,
+                "model": profile.model,
+                "prompt_version": f"prompts/propose.md@sha256:{prompt_sha}",
+            }
+            proposal["status"] = "pending"
     saved = save_proposal(proposal, root)
     return ProposeResult(
         proposal_id=str(proposal["id"]),
@@ -272,7 +286,7 @@ def _controlled_send(
         policy_digest=policy.digest,
     )
     cached = InterpretationStore(vault).lookup(key)
-    if cached is not None:
+    if isinstance(cached, str):
         return cached, key, True
     measured = accounted_input(
         [item["content"] for item in redacted],

@@ -15,9 +15,12 @@ budget are used, so existing single-model CLI usage keeps working.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import math
 import os
+import tempfile
+from contextlib import contextmanager
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -246,52 +249,124 @@ def interpretation_key(
     })
 
 
+class ReplayUnavailable:
+    """The index names a record that is no longer on disk."""
+
+    def __init__(self, record_id: str):
+        self.record_id = record_id
+        self.reason = "replay_unavailable"
+
+
 class InterpretationStore:
     """Immutable records plus a write-once index of accepted responses."""
 
     def __init__(self, vault: Path):
         self.root = Path(vault) / ".octopus-kb" / "interpretations"
 
-    def lookup(self, key: str) -> str | None:
-        index = self._index(key)
-        if not index.is_file():
+    def lookup(self, key: str) -> str | ReplayUnavailable | None:
+        with _lock(self.root):
+            return self._lookup_unlocked(key)
+
+    def publish(self, key: str, response_text: str) -> str:
+        """Return the winning text. A missing record is replaced and linked."""
+        with _lock(self.root):
+            current = _read_json(self._index(key))
+            regenerated_from = None
+            if current and current.get("record_id"):
+                existing = self._read_record(str(current["record_id"]))
+                if existing is not None and existing.get("accepted") is True:
+                    return str(existing.get("response_text") or "")
+                regenerated_from = str(current["record_id"])
+            record_id = uuid.uuid4().hex
+            record = {
+                "record_id": record_id,
+                "key": key,
+                "accepted": True,
+                "response_text": response_text,
+                "regenerated_from": regenerated_from,
+            }
+            directory = self.root / "records"
+            directory.mkdir(parents=True, exist_ok=True)
+            _write_exclusive(directory / f"{record_id}.json", record)
+            index = self._index(key)
+            index.parent.mkdir(parents=True, exist_ok=True)
+            payload = json.dumps(
+                {"record_id": record_id, "regenerated_from": regenerated_from},
+                sort_keys=True,
+            ) + "\n"
+            fd, tmp_name = tempfile.mkstemp(prefix=f".{record_id}.", suffix=".tmp", dir=index.parent)
+            tmp_path = Path(tmp_name)
+            try:
+                _write_all(fd, payload.encode("utf-8"))
+                os.fsync(fd)
+                os.close(fd)
+                fd = -1
+                if regenerated_from is not None:
+                    os.replace(tmp_path, index)
+                else:
+                    try:
+                        os.link(tmp_path, index)
+                    except FileExistsError:
+                        winner = self._lookup_unlocked(key)
+                        return winner if isinstance(winner, str) else response_text
+            finally:
+                if fd >= 0:
+                    os.close(fd)
+                tmp_path.unlink(missing_ok=True)
+            return response_text
+
+    def _lookup_unlocked(self, key: str) -> str | ReplayUnavailable | None:
+        current = _read_json(self._index(key))
+        if not current or not current.get("record_id"):
             return None
-        record_id = json.loads(index.read_text(encoding="utf-8")).get("record_id")
-        record_path = self.root / "records" / f"{record_id}.json"
-        if not record_path.is_file():
-            return None
-        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record = self._read_record(str(current["record_id"]))
+        if record is None:
+            return ReplayUnavailable(str(current["record_id"]))
         if record.get("accepted") is not True:
             return None
         return str(record.get("response_text") or "")
 
-    def publish(self, key: str, response_text: str) -> None:
-        index = self._index(key)
-        if index.exists():
-            return
-        record_id = uuid.uuid4().hex
-        record = {
-            "record_id": record_id,
-            "key": key,
-            "accepted": True,
-            "response_text": response_text,
-        }
-        directory = self.root / "records"
-        directory.mkdir(parents=True, exist_ok=True)
-        target = directory / f"{record_id}.json"
-        target.write_text(json.dumps(record, sort_keys=True) + "\n", encoding="utf-8")
-        index.parent.mkdir(parents=True, exist_ok=True)
-        temporary = index.with_suffix(".tmp")
-        temporary.write_text(json.dumps({"record_id": record_id}, sort_keys=True) + "\n", encoding="utf-8")
-        try:
-            os.link(temporary, index)
-        except FileExistsError:
-            pass
-        finally:
-            temporary.unlink(missing_ok=True)
+    def _read_record(self, record_id: str) -> dict | None:
+        return _read_json(self.root / "records" / f"{record_id}.json")
 
     def _index(self, key: str) -> Path:
         return self.root / "index" / f"{key}.json"
+
+
+@contextmanager
+def _lock(root: Path):
+    root.mkdir(parents=True, exist_ok=True)
+    handle = open(root / ".lock", "a+")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+
+def _read_json(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_exclusive(path: Path, record: dict) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        _write_all(fd, (json.dumps(record, sort_keys=True) + "\n").encode("utf-8"))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _write_all(fd: int, payload: bytes) -> None:
+    view = memoryview(payload)
+    while view:
+        written = os.write(fd, view)
+        if written <= 0:
+            raise OSError("short write")
+        view = view[written:]
 
 
 def _count_hits(value: str) -> int:
