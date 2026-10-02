@@ -285,6 +285,23 @@ See `CHANGELOG.md` and `docs/roadmap.md` for details.
 
 ---
 
+## Phase 1c vault ingress
+
+These settings come from the deployment, not from a request:
+
+| Setting | Meaning |
+|---|---|
+| `OCTOPUS_KB_VAULTS` | JSON map of `vault_id` to `{"root", "allowed_access_labels"}`. When it is set, every path is resolved with `realpath` and must stay inside a configured root. Unset keeps the single-vault CLI behaviour. |
+| `OCTOPUS_KB_TENANT` | Deployment tenant. It is not taken from an envelope. |
+| `OCTOPUS_KB_APPROVAL_KEYS` | JSON map of `key_id` to a base64 Ed25519 public key. Pins trust locally. This process does not fetch the parser's key route to decide what to trust. |
+| `OCTOPUS_KB_MODEL_POLICY` | Optional JSON policy and budget for `propose`. Unset keeps the local default endpoint and a wide `kb.propose` budget. |
+
+`kb_ingest_envelope` stages delivery parts and activates one revision with compare-and-swap. Reads (`lookup`, `retrieve-bundle`, `neighbors`, `export`, and `lint`) use the active revision only. Provenance is taken from the activation record that matches the pointer. A page with no matching record is `unledgered`.
+
+An identical replayed `propose` returns the stored proposal with `replayed: true` and does not call the transport. A different body under the same id is still a collision.
+
+The legacy write paths (`validate --apply`, inbox accept, migrate, and the other mutation commands) are not gated by an approval. They stay ungated and are reported `unledgered`.
+
 ## Status
 
 0.6.0 delivered: deterministic core + agent decision CLI + rule-gated LLM propose loop + eval baseline.
