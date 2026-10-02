@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "name": "unlisted_endpoint",
+      "endpoint_name": "missing",
+      "endpoint": "https://allowed.example/v1",
+      "model": "m",
+      "text_f4": "observe",
+      "texts": ["hello"],
+      "expect": "policy_denied"
+    },
+    {
+      "name": "observe_keeps_email",
+      "text_f4": "observe",
+      "texts": ["write user@example.com"],
+      "expect_text": "write user@example.com",
+      "expect_hits": 1
+    },
+    {
+      "name": "enforce_redacts_email",
+      "text_f4": "enforce",
+      "texts": ["write user@example.com"],
+      "expect_text": "write [REDACTED_EMAIL]",
+      "expect_hits": 1
+    },
+    {
+      "name": "enforce_redacts_secret",
+      "text_f4": "enforce",
+      "texts": ["token sk-abcdefghijklmnopqrstuvwxyz"],
+      "expect_text": "token [REDACTED_SECRET]",
+      "expect_hits": 1
+    }
+  ]
+}

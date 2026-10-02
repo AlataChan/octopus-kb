@@ -1,0 +1,61 @@
+{
+  "accounting": {
+    "byte_bounded": true,
+    "per_message_overhead": 8,
+    "per_request_overhead": 16,
+    "image_cost": 1105,
+    "max_image_dimension": 2048
+  },
+  "cases": [
+    {
+      "name": "plain_text",
+      "texts": ["abcd"],
+      "schema": null,
+      "images": [],
+      "expect_input": 28
+    },
+    {
+      "name": "schema_overhead",
+      "texts": ["abcd"],
+      "schema": {"type": "json_object"},
+      "images": [],
+      "expect_input": 50
+    },
+    {
+      "name": "many_short_messages",
+      "texts": ["a", "a", "a", "a", "a", "a", "a", "a", "a", "a"],
+      "schema": null,
+      "images": [],
+      "expect_input": 106
+    },
+    {
+      "name": "one_long_message",
+      "texts": ["aaaaaaaaaa"],
+      "schema": null,
+      "images": [],
+      "expect_input": 34
+    },
+    {
+      "name": "capped_image",
+      "texts": ["a"],
+      "schema": null,
+      "images": [{"width": 1024, "height": 768}],
+      "expect_input": 1130
+    },
+    {
+      "name": "large_image",
+      "texts": ["a"],
+      "schema": null,
+      "images": [{"width": 8000, "height": 8000}],
+      "expect_input": 16886
+    },
+    {
+      "name": "unknown_image_dimensions",
+      "texts": ["a"],
+      "schema": null,
+      "images": [{"width": null, "height": null}],
+      "expect_input": 1130
+    }
+  ],
+  "boundaries": {"limit": 28, "below": 27, "at": 28, "above": 29}
+}
