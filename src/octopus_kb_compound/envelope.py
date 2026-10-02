@@ -405,11 +405,29 @@ def _write_fsync(path: Path, payload: bytes, event: str) -> None:
     DURABILITY_LOG.append(event)
 
 
+def _repair_activation_prefix(path: Path, prefix: bytes) -> None:
+    """Drop a torn tail without removing the valid prefix first.
+
+    ``ftruncate`` shortens the file to ``prefix``. A crash before, during, or
+    after that call still leaves the previous records readable.
+    """
+    _checkpoint("activation-repair-before")
+    fd = os.open(path, os.O_RDWR)
+    try:
+        os.ftruncate(fd, len(prefix))
+        _checkpoint("activation-repair-during")
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _checkpoint("activation-repair-after")
+    DURABILITY_LOG.append("activation-repair")
+
+
 def _append_fsync(path: Path, payload: bytes, event: str) -> None:
     existing = path.read_bytes() if path.is_file() else b""
     prefix = activation_prefix(existing)
     if prefix != existing:
-        _write_fsync(path, prefix, "activation-repair")
+        _repair_activation_prefix(path, prefix)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
     try:
         _write_all(fd, payload)
