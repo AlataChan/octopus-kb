@@ -2,84 +2,9 @@
   "kb_export_graph": {
     "parameters": [
       {
+        "name": "vault",
         "annotation": "str",
-        "default": null,
-        "name": "vault"
-      }
-    ],
-    "returns": "dict"
-  },
-  "kb_ingest": {
-    "parameters": [
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "vault"
-      },
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "markdown"
-      },
-      {
-        "annotation": "str | None",
-        "default": "None",
-        "name": "title"
-      },
-      {
-        "annotation": "list[str] | None",
-        "default": "None",
-        "name": "tags"
-      }
-    ],
-    "returns": "dict"
-  },
-  "kb_lookup": {
-    "parameters": [
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "vault"
-      },
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "term"
-      }
-    ],
-    "returns": "dict"
-  },
-  "kb_neighbors": {
-    "parameters": [
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "vault"
-      },
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "page"
-      }
-    ],
-    "returns": "dict"
-  },
-  "kb_propose": {
-    "parameters": [
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "vault"
-      },
-      {
-        "annotation": "str",
-        "default": null,
-        "name": "raw_path"
-      },
-      {
-        "annotation": "dict | None",
-        "default": "None",
-        "name": "profile"
+        "default": null
       }
     ],
     "returns": "dict"
@@ -87,24 +12,124 @@
   "kb_retrieve_bundle": {
     "parameters": [
       {
+        "name": "vault",
         "annotation": "str",
-        "default": null,
-        "name": "vault"
+        "default": null
       },
       {
+        "name": "query",
         "annotation": "str",
-        "default": null,
-        "name": "query"
+        "default": null
       },
       {
+        "name": "max_tokens",
         "annotation": "int",
-        "default": "1500",
-        "name": "max_tokens"
+        "default": "1500"
       },
       {
+        "name": "max_text_chars",
         "annotation": "int",
-        "default": "4000",
-        "name": "max_text_chars"
+        "default": "4000"
+      }
+    ],
+    "returns": "dict"
+  },
+  "kb_ingest": {
+    "parameters": [
+      {
+        "name": "vault",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "markdown",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "title",
+        "annotation": "str | None",
+        "default": "None"
+      },
+      {
+        "name": "tags",
+        "annotation": "list[str] | None",
+        "default": "None"
+      }
+    ],
+    "returns": "dict"
+  },
+  "kb_ingest_envelope": {
+    "parameters": [
+      {
+        "name": "vault_id",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "manifest",
+        "annotation": "dict",
+        "default": null
+      },
+      {
+        "name": "parts",
+        "annotation": "list[dict]",
+        "default": null
+      },
+      {
+        "name": "approval",
+        "annotation": "dict | None",
+        "default": "None"
+      }
+    ],
+    "returns": "dict"
+  },
+  "kb_neighbors": {
+    "parameters": [
+      {
+        "name": "vault",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "page",
+        "annotation": "str",
+        "default": null
+      }
+    ],
+    "returns": "dict"
+  },
+  "kb_lookup": {
+    "parameters": [
+      {
+        "name": "vault",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "term",
+        "annotation": "str",
+        "default": null
+      }
+    ],
+    "returns": "dict"
+  },
+  "kb_propose": {
+    "parameters": [
+      {
+        "name": "vault",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "raw_path",
+        "annotation": "str",
+        "default": null
+      },
+      {
+        "name": "profile",
+        "annotation": "dict | None",
+        "default": "None"
       }
     ],
     "returns": "dict"
@@ -112,19 +137,19 @@
   "kb_validate": {
     "parameters": [
       {
+        "name": "vault",
         "annotation": "str",
-        "default": null,
-        "name": "vault"
+        "default": null
       },
       {
+        "name": "proposal_path",
         "annotation": "str",
-        "default": null,
-        "name": "proposal_path"
+        "default": null
       },
       {
+        "name": "apply",
         "annotation": "bool",
-        "default": "False",
-        "name": "apply"
+        "default": "False"
       }
     ],
     "returns": "dict"

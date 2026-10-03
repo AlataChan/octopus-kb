@@ -15,7 +15,18 @@
         "properties": {
           "code": {"type": "string"},
           "path": {"type": "string"},
-          "message": {"type": "string"}
+          "message": {"type": "string"},
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ledger_status", "revision_id", "logical_document_id", "access_label"],
+            "properties": {
+              "ledger_status": {"type": "string"},
+              "revision_id": {"type": ["string", "null"]},
+              "logical_document_id": {"type": ["string", "null"]},
+              "access_label": {"type": ["string", "null"]}
+            }
+          }
         }
       }
     }

@@ -41,10 +41,14 @@ class RetrievalBundle:
 
 
 def build_retrieval_bundle(
-    vault: str | Path, query: str, *, max_tokens: int = 0
+    vault: str | Path,
+    query: str,
+    *,
+    max_tokens: int = 0,
+    store: ObsidianStore | None = None,
 ) -> RetrievalBundle:
     root = Path(vault)
-    store = ObsidianStore(root)
+    store = store or ObsidianStore(root)
     pages = store.list_page_records()
     alias_index = build_alias_index(pages)
     by_title = {page.title: page for page in pages}
@@ -65,10 +69,10 @@ def build_retrieval_bundle(
     entity_matches = _related_entities(concepts, alias_index, by_title)
     entities = [page for page, _reason in entity_matches]
     raw_sources = _raw_sources(pages, query, concepts)
-    concept_items = [_page_item(page, _concept_reason(page, query)) for page in concepts]
-    entity_items = [_page_item(page, reason) for page, reason in entity_matches]
+    concept_items = [_page_item(page, _concept_reason(page, query), store) for page in concepts]
+    entity_items = [_page_item(page, reason, store) for page, reason in entity_matches]
     raw_source_items = [
-        _page_item(page, "backlink" if concepts else "title_match")
+        _page_item(page, "backlink" if concepts else "title_match", store)
         for page in raw_sources
     ]
     ordered = _dedupe([schema, index] + [p.path for p in concepts] + [p.path for p in entities] + [p.path for p in raw_sources])
@@ -208,8 +212,13 @@ def _concept_reason(page: PageRecord, query: str) -> str:
     return "backlink"
 
 
-def _page_item(page: PageRecord, reason: str) -> dict[str, str]:
-    return {"path": page.path, "title": page.title, "reason": reason}
+def _page_item(page: PageRecord, reason: str, store: ObsidianStore) -> dict:
+    return {
+        "path": page.path,
+        "title": page.title,
+        "reason": reason,
+        "provenance": store.provenance_for(page.path),
+    }
 
 
 def _markdown_by_path(root: Path, pages: list[PageRecord]) -> dict[str, str]:

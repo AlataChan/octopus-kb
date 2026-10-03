@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
+from octopus_kb_compound.resolver import require_mcp_mapping
+
 from . import tools
 
 mcp = FastMCP("octopus-kb")
@@ -20,6 +22,11 @@ def kb_retrieve_bundle(vault: str, query: str, max_tokens: int = 1500, max_text_
 @mcp.tool()
 def kb_ingest(vault: str, markdown: str, title: str | None = None, tags: list[str] | None = None) -> dict:
     return tools.ingest(vault, markdown, title=title, tags=tags or [])
+
+
+@mcp.tool()
+def kb_ingest_envelope(vault_id: str, manifest: dict, parts: list[dict], approval: dict | None = None) -> dict:
+    return tools.ingest_envelope(vault_id, manifest, parts, approval)
 
 
 @mcp.tool()
@@ -43,6 +50,7 @@ def kb_validate(vault: str, proposal_path: str, apply: bool = False) -> dict:
 
 
 def main() -> None:
+    require_mcp_mapping()
     mcp.run(transport="stdio")
 
 

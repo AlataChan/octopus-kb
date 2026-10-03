@@ -17,6 +17,7 @@ from octopus_kb_compound.apply import (
     _rule_results_to_dicts,
     apply_proposal,
 )
+from octopus_kb_compound.resolver import resolve_vault
 from octopus_kb_compound.validators.declarative import evaluate_chain, load_rules
 
 
@@ -132,7 +133,7 @@ def _inbox_dir(root: Path) -> Path:
 
 
 def _require_vault(vault: Path | str) -> Path:
-    root = Path(vault)
+    root = resolve_vault(vault)
     if not root.exists() or not root.is_dir():
         raise ValidateInputError(f"Vault is not a directory: {root}")
     return root

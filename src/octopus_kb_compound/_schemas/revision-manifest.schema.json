@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://octopus.local/schemas/revision-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tenant",
+    "vault_id",
+    "access_label",
+    "placement",
+    "logical_document_id",
+    "parent_revision_id",
+    "parts",
+    "status",
+    "redaction_policy",
+    "policy_version",
+    "revision_id"
+  ],
+  "properties": {
+    "schema_version": {"const": "revision-manifest/0.1.0"},
+    "tenant": {"type": "string", "minLength": 1},
+    "vault_id": {"type": "string", "minLength": 1},
+    "access_label": {"type": "string", "minLength": 1},
+    "placement": {"type": "string", "minLength": 1},
+    "logical_document_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "parent_revision_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      ]
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["part_id", "index", "part_digest"],
+        "properties": {
+          "part_id": {"type": "string", "minLength": 1},
+          "index": {"type": "integer", "minimum": 0},
+          "part_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "status": {"enum": ["consistent_unverified", "completed_partial"]},
+    "redaction_policy": {"type": "string", "minLength": 1},
+    "policy_version": {"type": "string", "minLength": 1},
+    "revision_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

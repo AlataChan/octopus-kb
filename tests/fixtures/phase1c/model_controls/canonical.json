@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "key_order",
+      "value": {"b": 1, "a": [2, 3]},
+      "canonical": "{\"a\":[2,3],\"b\":1}"
+    },
+    {
+      "name": "nested",
+      "value": {"z": {"b": 1, "a": 2}},
+      "canonical": "{\"z\":{\"a\":2,\"b\":1}}"
+    },
+    {
+      "name": "unicode",
+      "value": {"text": "page"},
+      "canonical": "{\"text\":\"page\"}"
+    }
+  ]
+}

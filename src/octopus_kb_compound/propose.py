@@ -7,20 +7,43 @@ import json
 import os
 import re
 import tempfile
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from octopus_kb_compound.config import ConfigError, load_config
+from octopus_kb_compound.controls import (
+    InterpretationStore,
+    Reservation,
+    accounted_input,
+    interpretation_key,
+    load_budget,
+    load_policy,
+    request_digest,
+)
+from octopus_kb_compound.active import load_view
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
+from octopus_kb_compound.resolver import (
+    VaultRootError,
+    deployment_tenant,
+    is_revision_tree,
+    require_inside,
+    resolve_vault,
+    vault_relative,
+)
 from octopus_kb_compound.frontmatter import parse_document
+from octopus_kb_compound import llm as llm_mod
 from octopus_kb_compound.llm import (
     ChatClient,
     ChatRequest,
     LLMError,
     LLMInvalidOutputError,
+    LLMNetworkError,
+    LLMRateLimitError,
 )
-from octopus_kb_compound.proposals import save_proposal, validate_proposal_dict
+from octopus_kb_compound.proposals import proposal_id_from_key, save_proposal, validate_proposal_dict
 from octopus_kb_compound.retrieve import build_retrieval_bundle
 
 
@@ -32,18 +55,42 @@ class ProposeRuntimeError(RuntimeError):
     """Runtime failure while producing a proposal."""
 
 
+class ProposeDeferred(ProposeRuntimeError):
+    """The prompt was not sent. The part is in the inbox."""
+
+    def __init__(self, reason: str, measured_size: int, path: str):
+        self.reason = reason
+        self.measured_size = measured_size
+        self.path = path
+        super().__init__(reason)
+
+
+@dataclass(frozen=True)
+class _Send:
+    content: str
+    key: str
+    replayed: bool
+    base_digest: str
+    attempt_digest: str
+    served_model: str
+
+
 @dataclass(frozen=True)
 class ProposeResult:
     proposal_id: str
     path: str
     operations: int
+    replayed: bool = False
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "proposal_id": self.proposal_id,
             "path": self.path,
             "operations": self.operations,
         }
+        if self.replayed:
+            payload["replayed"] = True
+        return payload
 
 
 def propose_from_raw(
@@ -51,12 +98,21 @@ def propose_from_raw(
     vault: Path,
     *,
     profile_name: str | None = None,
+    provenance: str | None = None,
 ) -> ProposeResult:
-    root = Path(vault)
-    source = Path(raw_file)
+    root = resolve_vault(vault)
+    source = require_inside(root, raw_file)
     _validate_inputs(source, root)
 
-    raw_bytes = source.read_bytes()
+    relative = vault_relative(root, source)
+    view = load_view(root)
+    if is_revision_tree(relative):
+        pinned = view.text_by_path.get(relative)
+        if pinned is None:
+            raise VaultRootError("inactive_revision")
+        raw_bytes = pinned.encode("utf-8")
+    else:
+        raw_bytes = source.read_bytes()
     raw_body = raw_bytes.decode("utf-8", errors="replace")
     raw_sha = hashlib.sha256(raw_bytes).hexdigest()
     raw_frontmatter, _ = parse_document(raw_body)
@@ -74,7 +130,7 @@ def propose_from_raw(
     prompt_bytes = prompt_path.read_bytes()
     prompt_sha = hashlib.sha256(prompt_bytes).hexdigest()
     prompt_template = prompt_bytes.decode("utf-8")
-    existing_bundle = build_retrieval_bundle(root, raw_title).to_dict()
+    existing_bundle = build_retrieval_bundle(root, raw_title, store=ObsidianStore(root, view=view)).to_dict()
     prompt = _render_template(
         prompt_template,
         {
@@ -86,8 +142,17 @@ def propose_from_raw(
     )
 
     client = ChatClient(**profile.as_client_kwargs())
+    source_provenance = provenance or raw_rel_path
     try:
-        proposal = _request_proposal_json(client, prompt, root)
+        proposal, raw_response, response_key, replayed, producing_attempt, base_digest, served_model = _request_proposal_json(
+            client,
+            prompt,
+            root,
+            provenance=source_provenance,
+            prompt_digest=prompt_sha,
+            endpoint=profile.base_url,
+            model=profile.model,
+        )
     except LLMError as exc:
         raise ProposeRuntimeError(str(exc)) from exc
     if not isinstance(proposal, dict):
@@ -98,17 +163,15 @@ def propose_from_raw(
         )
         raise ProposeRuntimeError("proposal schema invalid")
 
-    proposal["source"] = {
-        "kind": "raw_file",
-        "path": raw_rel_path,
-        "sha256": raw_sha,
-    }
-    proposal["produced_by"] = {
-        "provider_profile": profile_key,
-        "model": profile.model,
-        "prompt_version": f"prompts/propose.md@sha256:{prompt_sha}",
-    }
-    proposal["status"] = "pending"
+    _stamp_proposal(
+        proposal,
+        proposal_id=proposal_id_from_key(response_key),
+        raw_rel_path=raw_rel_path,
+        raw_sha=raw_sha,
+        profile_key=profile_key,
+        model=profile.model,
+        prompt_sha=prompt_sha,
+    )
 
     errors = validate_proposal_dict(proposal)
     if errors:
@@ -119,53 +182,330 @@ def propose_from_raw(
         )
         raise ProposeRuntimeError("proposal schema invalid")
 
+    if not replayed:
+        stored = InterpretationStore(root).publish(
+            response_key,
+            raw_response,
+            provenance=source_provenance,
+            request_digest_hex=base_digest,
+            attempt=producing_attempt,
+            served_model=served_model,
+        )
+        if stored != raw_response:
+            proposal = json.loads(stored)
+            raw_response = stored
+            _stamp_proposal(
+                proposal,
+                proposal_id=proposal_id_from_key(response_key),
+                raw_rel_path=raw_rel_path,
+                raw_sha=raw_sha,
+                profile_key=profile_key,
+                model=profile.model,
+                prompt_sha=prompt_sha,
+            )
     saved = save_proposal(proposal, root)
     return ProposeResult(
         proposal_id=str(proposal["id"]),
         path=saved.relative_to(root).as_posix(),
         operations=len(proposal.get("operations", [])),
+        replayed=replayed,
     )
 
 
-def _request_proposal_json(client: ChatClient, prompt: str, vault: Path) -> Any:
-    messages = [{"role": "user", "content": prompt}]
+def _stamp_proposal(
+    proposal: dict,
+    *,
+    proposal_id: str,
+    raw_rel_path: str,
+    raw_sha: str,
+    profile_key: str,
+    model: str,
+    prompt_sha: str,
+) -> None:
+    proposal["id"] = proposal_id
+    proposal["source"] = {
+        "kind": "raw_file",
+        "path": raw_rel_path,
+        "sha256": raw_sha,
+    }
+    proposal["produced_by"] = {
+        "provider_profile": profile_key,
+        "model": model,
+        "prompt_version": f"prompts/propose.md@sha256:{prompt_sha}",
+    }
+    proposal["status"] = "pending"
+
+
+def propose_from_part(part: dict, vault: Path, *, profile_name: str | None = None) -> ProposeResult:
+    """Propose one envelope part. The prompt contains that part and no others."""
+    root = resolve_vault(vault)
+    body = str(part.get("body") or "")
+    digest = str(part.get("part_digest") or "")
+    source = root / ".octopus-kb" / "part-propose" / f"{digest or 'part'}.md"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(body, encoding="utf-8")
+    return propose_from_raw(source, root, profile_name=profile_name, provenance=digest or source.name)
+
+
+def _request_proposal_json(
+    client: ChatClient,
+    prompt: str,
+    vault: Path,
+    *,
+    provenance: str,
+    prompt_digest: str,
+    endpoint: str,
+    model: str,
+) -> tuple[Any, str, str, bool, int, str, str]:
+    base_messages = [{"role": "user", "content": prompt}]
+    messages = list(base_messages)
+    budget = load_budget()
+    policy = load_policy()
     last_output = ""
+    response_format = {"type": "json_object"}
+    store = InterpretationStore(vault)
     for attempt in range(1, 3):
-        try:
-            response = client.chat(
-                ChatRequest(
-                    messages=messages,
-                    json_object=True,
-                    temperature=0.1,
-                    max_tokens=4000,
-                )
+        sent = _controlled_send(
+            client,
+            messages,
+            cache_messages=base_messages,
+            vault=vault,
+            budget=budget,
+            policy=policy,
+            provenance=provenance,
+            prompt_digest=prompt_digest,
+            endpoint=endpoint,
+            model=model,
+            response_format=response_format,
+            source_path=provenance,
+        )
+        if sent.replayed:
+            return json.loads(sent.content), sent.content, sent.key, True, attempt, sent.base_digest, sent.served_model
+        parsed = _UNPARSED
+        if sent.content:
+            try:
+                parsed = json.loads(sent.content)
+            except json.JSONDecodeError as exc:
+                last_output = str(exc)
+        if parsed is not _UNPARSED:
+            store.record_attempt(
+                sent.key,
+                provenance=provenance,
+                request_digest_hex=sent.attempt_digest,
+                attempt=attempt,
+                served_model=sent.served_model,
+                reason="accepted",
             )
-            last_output = response.content
-            return json.loads(response.content)
-        except LLMInvalidOutputError as exc:
-            last_output = str(exc)
-        except json.JSONDecodeError as exc:
-            last_output = str(exc)
-        except LLMError:
-            raise
-
+            return parsed, sent.content, sent.key, False, attempt, sent.base_digest, sent.served_model
+        store.record_attempt(
+            sent.key,
+            provenance=provenance,
+            request_digest_hex=sent.attempt_digest,
+            attempt=attempt,
+            served_model=sent.served_model,
+            reason="non_json",
+        )
+        last_output = last_output or sent.content
         if attempt == 1:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": _retry_schema_reminder(),
-                }
-            )
+            messages = [*base_messages, {"role": "user", "content": _retry_schema_reminder()}]
             continue
-
         _write_rejection(
             vault,
             "llm_non_json",
             {"reason": "llm_non_json", "last_output": last_output, "attempts": 2},
         )
         raise ProposeRuntimeError("LLM returned non-JSON output")
-
     raise ProposeRuntimeError("LLM returned non-JSON output")
+
+
+def _controlled_send(
+    client: ChatClient,
+    messages: list[dict],
+    *,
+    cache_messages: list[dict],
+    vault: Path,
+    budget,
+    policy,
+    provenance: str,
+    prompt_digest: str,
+    endpoint: str,
+    model: str,
+    response_format: dict,
+    source_path: str,
+) -> _Send:
+    base = _bind_request(
+        policy,
+        endpoint=endpoint,
+        model=model,
+        messages=cache_messages,
+        provenance=provenance,
+        prompt_digest=prompt_digest,
+        response_format=response_format,
+    )
+    if not base.decision.allowed:
+        _defer(vault, base.decision.disposition, 0, source_path)
+    store = InterpretationStore(vault)
+    cached = store.lookup(base.key)
+    if isinstance(cached, str):
+        winner = store.read_winner(base.key)
+        return _Send(
+            cached,
+            base.key,
+            True,
+            base.digest,
+            base.digest,
+            str(winner.get("served_model") or "") if winner else "",
+        )
+    if messages == cache_messages:
+        bound = base
+    else:
+        bound = _bind_request(
+            policy,
+            endpoint=endpoint,
+            model=model,
+            messages=messages,
+            provenance=provenance,
+            prompt_digest=prompt_digest,
+            response_format=response_format,
+        )
+        if not bound.decision.allowed:
+            _defer(vault, bound.decision.disposition, 0, source_path)
+    redacted = bound.redacted
+    decision = bound.decision
+    measured = accounted_input(
+        [item["content"] for item in redacted],
+        response_format,
+        [],
+        decision.accounting or {},
+    )
+    output_allowance = 4000
+    reservation = Reservation(calls=1, input_tokens=measured, output_tokens=output_allowance, images=0)
+    request = ChatRequest(
+        messages=redacted,
+        json_object=True,
+        temperature=0.1,
+        max_tokens=output_allowance,
+    )
+    attempts = client.max_retries + 1
+    last_error: LLMError | None = None
+    for attempt in range(attempts):
+        exceeded = budget.reserve(reservation)
+        if exceeded is not None:
+            if last_error is not None:
+                _defer(
+                    vault,
+                    "budget_exhausted",
+                    measured + output_allowance,
+                    source_path,
+                    diagnostic=str(last_error),
+                )
+            reason = "oversized_prompt" if exceeded in {"input_tokens", "output_tokens", "images"} else "budget_exhausted"
+            _defer(vault, reason, measured + output_allowance, source_path)
+        try:
+            response = client.chat(request, retries=0)
+        except LLMInvalidOutputError as exc:
+            budget.settle(reservation, None)
+            return _Send(str(exc), base.key, False, base.digest, bound.digest, "")
+        except (LLMRateLimitError, LLMNetworkError) as exc:
+            budget.settle(reservation, None, timeout=True)
+            last_error = exc
+            if attempt == attempts - 1:
+                raise
+            llm_mod._sleep(llm_mod._retry_delay(attempt))
+            continue
+        except LLMError:
+            budget.settle(reservation, None, timeout=True)
+            raise
+        budget.settle(reservation, _observed_usage(response, reservation))
+        if response.model != model:
+            raise LLMError("served_model_mismatch")
+        return _Send(response.content, base.key, False, base.digest, bound.digest, response.model)
+    if last_error is not None:
+        raise last_error
+    raise LLMError("LLM request failed")
+
+
+@dataclass(frozen=True)
+class _Bound:
+    decision: Any
+    redacted: list[dict]
+    digest: str
+    key: str
+
+
+_UNPARSED = object()
+
+
+def _bind_request(
+    policy,
+    *,
+    endpoint: str,
+    model: str,
+    messages: list[dict],
+    provenance: str,
+    prompt_digest: str,
+    response_format: dict,
+) -> _Bound:
+    decision = policy.apply(
+        endpoint=endpoint,
+        model=model,
+        texts=[str(item["content"]) for item in messages],
+    )
+    if not decision.allowed:
+        return _Bound(decision, [], "", "")
+    redacted = [
+        {"role": item["role"], "content": text}
+        for item, text in zip(messages, decision.texts, strict=True)
+    ]
+    digest = request_digest(redacted, response_format)
+    key = interpretation_key(
+        tenant=deployment_tenant(),
+        provenance=provenance,
+        endpoint=endpoint,
+        model=model,
+        prompt_version_digest=prompt_digest,
+        request_digest_hex=digest,
+        policy_digest=policy.digest,
+    )
+    return _Bound(decision, redacted, digest, key)
+
+
+def _observed_usage(response, reserved: Reservation) -> Reservation | None:
+    """Provider token counts. An unknown dimension keeps its reservation."""
+    if response.input_tokens is None and response.output_tokens is None:
+        return None
+    return Reservation(
+        calls=1,
+        input_tokens=reserved.input_tokens if response.input_tokens is None else int(response.input_tokens),
+        output_tokens=reserved.output_tokens if response.output_tokens is None else int(response.output_tokens),
+        images=reserved.images,
+    )
+
+
+def _defer(
+    vault: Path,
+    reason: str,
+    measured_size: int,
+    source_path: str,
+    diagnostic: str | None = None,
+) -> None:
+    directory = vault / ".octopus-kb" / "inbox"
+    directory.mkdir(parents=True, exist_ok=True)
+    proposal_id = "deferred-" + uuid.uuid4().hex[:16]
+    payload = {
+        "id": proposal_id,
+        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "reason": reason,
+        "measured_size": measured_size,
+        "operations": [],
+        "source": {"kind": "propose", "path": source_path},
+        "status": "deferred",
+    }
+    if diagnostic:
+        payload["diagnostic"] = diagnostic
+    target = directory / f"{proposal_id}.json"
+    target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    raise ProposeDeferred(reason, measured_size, target.relative_to(vault).as_posix())
 
 
 def _retry_schema_reminder() -> str:

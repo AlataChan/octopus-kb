@@ -34,7 +34,8 @@ class LookupResult:
 
 
 def lookup_term(term: str, vault: Path) -> LookupResult:
-    pages = ObsidianStore(vault).list_page_records()
+    store = ObsidianStore(vault)
+    pages = store.list_page_records()
     key = normalize_page_name(term)
     title_pages = _pages_by_title(pages)
     alias_collisions = find_alias_collisions(pages)
@@ -85,6 +86,7 @@ def lookup_term(term: str, vault: Path) -> LookupResult:
         )
 
     canonical = _canonical_payload(target_page)
+    canonical["provenance"] = store.provenance_for(target_page.path)
     return LookupResult(
         term=term,
         canonical=canonical,

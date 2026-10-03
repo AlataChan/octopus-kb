@@ -11,7 +11,9 @@ from octopus_kb_compound.apply import (
     recover_proposal,
     validate_proposal_file,
 )
+from octopus_kb_compound.adapters.obsidian.store import ObsidianStore
 from octopus_kb_compound import ingest
+from octopus_kb_compound.envelope import ingest_envelope
 from octopus_kb_compound.export import export_graph_artifacts
 from octopus_kb_compound.frontmatter import FrontmatterError, parse_document
 from octopus_kb_compound.impact import find_impacted_pages
@@ -35,10 +37,11 @@ from octopus_kb_compound.propose import (
     propose_from_raw,
 )
 import octopus_kb_compound.retrieve as retrieve_mod
+from octopus_kb_compound.resolver import VaultRootError, configured_vaults, require_inside, resolve_vault
 from octopus_kb_compound.retrieve import build_retrieval_bundle
 from octopus_kb_compound.schema import validate_frontmatter
 from octopus_kb_compound.summary import render_summary, summarize_vault
-from octopus_kb_compound.vault import load_page, scan_markdown_files
+from octopus_kb_compound.vault import load_page
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +61,15 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_parser.add_argument("--vault", required=True, type=Path)
     ingest_parser.add_argument("--tags", default="")
     ingest_parser.add_argument("--lang", default="zh")
+
+    envelope_parser = subparsers.add_parser(
+        "ingest-envelope",
+        help="Stage a delivery envelope and activate it when the revision is complete.",
+    )
+    envelope_parser.add_argument("--vault-id", required=True)
+    envelope_parser.add_argument("--manifest", required=True, type=Path)
+    envelope_parser.add_argument("--parts", required=True, type=Path)
+    envelope_parser.add_argument("--approval", type=Path)
 
     ingest_file_parser = subparsers.add_parser("ingest-file", help="Convert a local file and write it into raw/ as a markdown source.")
     ingest_file_parser.add_argument("path", type=Path)
@@ -153,18 +165,34 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except VaultRootError as exc:
+        print(exc.reason, file=sys.stderr)
+        return 2
+
+
+def _main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if getattr(args, "vault", None) is not None:
+        args.vault = resolve_vault(args.vault)
 
     if args.command == "lint":
         rc = _validate_vault_dir(args.vault)
         if rc is not None:
             return rc
         profile = load_vault_profile(args.vault)
-        pages = scan_markdown_files(args.vault, profile)
+        store = ObsidianStore(args.vault, profile)
+        pages = store.list_page_records()
         findings = lint_pages(pages)
         if args.json:
-            print(json.dumps({"findings": [_lint_finding_to_dict(finding) for finding in findings]}, ensure_ascii=False))
+            rows = []
+            for finding in findings:
+                row = _lint_finding_to_dict(finding)
+                row["provenance"] = store.provenance_for(finding.path)
+                rows.append(row)
+            print(json.dumps({"findings": rows}, ensure_ascii=False))
         else:
             for finding in findings:
                 print(f"{finding.code}\t{finding.path}\t{finding.message}")
@@ -177,8 +205,9 @@ def main(argv: list[str] | None = None) -> int:
         rc = _validate_page_file(args.page)
         if rc is not None:
             return rc
+        require_inside(args.vault, args.page)
         profile = load_vault_profile(args.vault)
-        pages = scan_markdown_files(args.vault, profile)
+        pages = ObsidianStore(args.vault, profile).list_page_records()
         target_page = load_page(args.page, root=args.vault)
         suggestions = suggest_links(target_page.body, pages, current_title=target_page.title)
         for suggestion in suggestions:
@@ -213,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
         rc = _validate_page_file(args.path)
         if rc is not None:
             return rc
+        if configured_vaults() is not None:
+            require_inside(args.vault, args.path)
 
         try:
             body, metadata = ingest.convert_file_to_markdown(str(args.path))
@@ -231,6 +262,14 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         print(output_path)
+        return 0
+
+    if args.command == "ingest-envelope":
+        manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+        parts = json.loads(args.parts.read_text(encoding="utf-8"))
+        approval = json.loads(args.approval.read_text(encoding="utf-8")) if args.approval else None
+        result = ingest_envelope(args.vault_id, manifest, parts, approval)
+        print(json.dumps(result, ensure_ascii=False))
         return 0
 
     if args.command == "vault-summary":
@@ -550,7 +589,7 @@ def _resolve_page_in_vault(page: Path, vault: Path) -> str | None:
     vault_root = vault.resolve()
     page_path = page.resolve() if page.is_absolute() else (vault / page).resolve()
     if not page_path.is_relative_to(vault_root):
-        print(f"Page is outside vault: {page}", file=sys.stderr)
+        print("outside_root", file=sys.stderr)
         return None
     if not page_path.exists():
         print(f"Page does not exist: {page}", file=sys.stderr)
