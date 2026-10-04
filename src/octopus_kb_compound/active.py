@@ -70,6 +70,7 @@ def load_view(root: str | Path, profile: VaultProfile | None = None) -> VaultVie
             "revision_id": revision_id,
             "logical_document_id": logical_id,
             "access_label": record["access_label"],
+            "authority": activation_authority(record),
         }
         for path in sorted(revision_dir.glob("*.md")):
             try:
@@ -118,6 +119,20 @@ def activation_prefix(data: bytes) -> bytes:
             continue
         return data
     return data
+
+
+def activation_authority(record: dict) -> dict:
+    """A record written before ``authority`` existed is an approval."""
+    authority = record.get("authority")
+    if isinstance(authority, dict) and authority.get("kind") == "attestation":
+        return {
+            "kind": "attestation",
+            "attestation_id": authority.get("attestation_id"),
+            "key_id": authority.get("key_id"),
+        }
+    if isinstance(authority, dict) and authority.get("kind") == "approval":
+        return {"kind": "approval", "approval_id": authority.get("approval_id")}
+    return {"kind": "approval", "approval_id": record.get("approval_id")}
 
 
 def matching_record(root: Path, logical_id: str, revision_id: str) -> dict | None:

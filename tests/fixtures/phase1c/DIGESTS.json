@@ -4,6 +4,6 @@
   "tests/fixtures/phase1c/model_controls/canonical.json": "d073eef0b0ec9cbdc85b909bdb3e07b1560f5c9ed5a6a430cc511a45cbb83740",
   "tests/fixtures/phase1c/model_controls/policy.json": "0ea250f8a1427b9f86cd952e44661ad29140f8e9261a2d57ac30e4abbb507c0c",
   "tests/fixtures/phase1c/model_controls/budget.json": "1e1ffad42896cd052afbd6734cdfc63168b041a416c2529832fef40f418f5fad",
-  "src/octopus_kb_compound/_schemas/delivery-envelope.schema.json": "17dcc8885a400089b3111abb84a83a20e22b31e352b5c038e37180cf6e6801c7",
-  "src/octopus_kb_compound/_schemas/revision-manifest.schema.json": "97585e3bdd046a016ec93b1b89cfd21ff475e2fa1f6fc8c8b439910c6ad124a2"
+  "src/octopus_kb_compound/_schemas/delivery-envelope.schema.json": "64a43d839d4bd6f27eeba5a2ccfe28e5bae696593e1bc94b76afe6f11d3dcf74",
+  "src/octopus_kb_compound/_schemas/revision-manifest.schema.json": "14a830d2585f5930d6e5135fceff5010f4045142a7990bcd2a8fe0c1924abfac"
 }

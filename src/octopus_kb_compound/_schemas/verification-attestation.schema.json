@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://octopus.local/schemas/verification-attestation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "role",
+    "attestation_id",
+    "key_id",
+    "revision_id",
+    "logical_document_id",
+    "tenant",
+    "vault_id",
+    "access_label",
+    "parts",
+    "catalog_digest",
+    "validator_registry_version",
+    "probe_scorer_version",
+    "decision_table_version",
+    "issued_at",
+    "expires_at",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "verification-attestation/0.1.0"
+    },
+    "role": {
+      "const": "verifier"
+    },
+    "attestation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "key_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "revision_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "logical_document_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "tenant": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vault_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "access_label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "part_digest",
+          "status"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "part_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "status": {
+            "enum": [
+              "succeeded",
+              "consistent_unverified",
+              "completed_partial"
+            ]
+          }
+        }
+      }
+    },
+    "catalog_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "validator_registry_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "probe_scorer_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_table_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "issued_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "expires_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
