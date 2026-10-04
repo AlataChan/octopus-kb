@@ -47,6 +47,7 @@ def write_pending(
     source: dict[str, Any],
     *,
     override: dict[str, list[str]] | None = None,
+    authority: dict[str, Any] | None = None,
 ) -> Path:
     """Create a pending audit entry before the commit phase starts."""
 
@@ -70,6 +71,8 @@ def write_pending(
         "override": override,
         "applied_at": None,
         "vault_sha_after": None,
+        "authority": authority,
+        "outcome": None,
     }
     target = audit_dir / f"{timestamp}-{proposal_id}.json"
     _atomic_write_json(target, entry)
@@ -79,6 +82,7 @@ def write_pending(
 def mark_applied(audit_path: Path | str, vault_sha_after: str) -> None:
     entry = _read_entry(audit_path)
     entry["status"] = "applied"
+    entry["outcome"] = "applied"
     entry["applied_at"] = _now_utc().isoformat().replace("+00:00", "Z")
     entry["vault_sha_after"] = vault_sha_after
     _atomic_write_json(Path(audit_path), entry)

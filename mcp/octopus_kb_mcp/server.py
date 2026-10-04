@@ -51,8 +51,13 @@ def kb_propose(vault: str, raw_path: str, profile: dict | None = None) -> dict:
 
 
 @mcp.tool()
-def kb_validate(vault: str, proposal_path: str, apply: bool = False) -> dict:
-    return tools.validate(vault, proposal_path, apply=apply)
+def kb_validate(
+    vault: str,
+    proposal_path: str,
+    apply: bool = False,
+    approval: dict | None = None,
+) -> dict:
+    return tools.validate(vault, proposal_path, apply=apply, approval=approval)
 
 
 def main() -> None:

@@ -34,6 +34,7 @@ from octopus_kb_compound.resolver import (
     vault_relative,
 )
 from octopus_kb_compound.frontmatter import parse_document
+from octopus_kb_compound.lineage import write_lineage
 from octopus_kb_compound import llm as llm_mod
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -204,6 +205,7 @@ def propose_from_raw(
                 prompt_sha=prompt_sha,
             )
     saved = save_proposal(proposal, root)
+    write_lineage(root, proposal)
     return ProposeResult(
         proposal_id=str(proposal["id"]),
         path=saved.relative_to(root).as_posix(),

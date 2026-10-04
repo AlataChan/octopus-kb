@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -15,6 +16,7 @@ from octopus_kb_compound.ckr.operations import operations_from_proposal
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.models import LintFinding, PageRecord
+from octopus_kb_compound.lineage import assess_lineage, record_apply
 from octopus_kb_compound.proposals import load_proposal
 from octopus_kb_compound.resolver import require_inside, resolve_vault
 from octopus_kb_compound.validators.declarative import (
@@ -71,6 +73,8 @@ def validate_proposal_file(
     *,
     apply: bool = False,
     override: dict[str, list[str]] | None = None,
+    approval: dict[str, Any] | None = None,
+    now: datetime | None = None,
 ) -> ApplyResult:
     root = resolve_vault(vault)
     path = require_inside(root, proposal_path)
@@ -107,7 +111,7 @@ def validate_proposal_file(
     if not apply:
         return ApplyResult(status=verdict.final, verdict=verdict.final, rule_results=rule_results)
 
-    return apply_proposal(root, proposal, verdict=verdict, override=override)
+    return apply_proposal(root, proposal, verdict=verdict, override=override, approval=approval, now=now)
 
 
 def apply_proposal(
@@ -116,9 +120,25 @@ def apply_proposal(
     *,
     verdict: Verdict | None = None,
     override: dict[str, list[str]] | None = None,
+    approval: dict[str, Any] | None = None,
+    now: datetime | None = None,
 ) -> ApplyResult:
     root = Path(vault)
     proposal_id = str(proposal["id"])
+    decision = assess_lineage(root, proposal, approval=approval, now=now)
+    if not decision.allowed:
+        record_apply(root, proposal_id, decision.authority, decision.reason)
+        _write_decision(
+            root,
+            "rejections",
+            proposal,
+            [],
+            status="rejected",
+            reason=decision.reason,
+            authority=decision.authority,
+            outcome=decision.reason,
+        )
+        return ApplyResult(status="rejected", message=decision.reason)
     boundary_error = _write_boundary_error(root, proposal)
     if boundary_error is not None:
         _write_decision(root, "rejections", proposal, [], status="rejected_write_boundary", reason=boundary_error)
@@ -164,11 +184,13 @@ def apply_proposal(
             ledger,
             proposal.get("source", {}),
             override=override,
+            authority=decision.authority,
         )
 
         store.apply_ops(ops, prepared=prepared, staged_dir=new_dir)
 
         audit.mark_applied(audit_path, audit.vault_markdown_sha(root))
+        record_apply(root, proposal_id, decision.authority, "applied")
         shutil.rmtree(staging, ignore_errors=True)
         return ApplyResult(
             status="applied",
@@ -275,6 +297,8 @@ def _write_decision(
     *,
     status: str,
     reason: str | None = None,
+    authority: dict[str, Any] | None = None,
+    outcome: str | None = None,
 ) -> Path:
     decision_dir = vault / ".octopus-kb" / directory
     decision_dir.mkdir(parents=True, exist_ok=True)
@@ -287,6 +311,10 @@ def _write_decision(
         payload["reason"] = rule_results[0]["reason"]
     elif reason is not None:
         payload["reason"] = reason
+    if authority is not None:
+        payload["authority"] = authority
+    if outcome is not None:
+        payload["outcome"] = outcome
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return target
 

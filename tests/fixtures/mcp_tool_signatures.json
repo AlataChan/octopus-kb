@@ -155,6 +155,11 @@
         "name": "apply",
         "annotation": "bool",
         "default": "False"
+      },
+      {
+        "name": "approval",
+        "annotation": "dict | None",
+        "default": "None"
       }
     ],
     "returns": "dict"

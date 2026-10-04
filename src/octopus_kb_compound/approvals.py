@@ -131,8 +131,13 @@ def verify_approval(
     vault_id: str,
     access_label: str,
     now: datetime,
+    expected_subject: str | None = None,
 ) -> ApprovalVerdict:
-    """Pure check. Tenant, vault, and access label come from trusted config."""
+    """Pure check. Tenant, vault, and access label come from trusted config.
+
+    ``expected_subject`` is the revision id already trusted by the caller.
+    When it is set, the approval's subject is compared with that id.
+    """
     if not isinstance(approval, dict) or not isinstance(manifest, dict):
         return ApprovalVerdict(False, "malformed")
     if any(name not in approval for name in _APPROVAL_FIELDS):
@@ -158,7 +163,7 @@ def verify_approval(
     if approval.get("action") != "publish":
         return ApprovalVerdict(False, "wrong_action")
     try:
-        digest = manifest_digest(manifest)
+        digest = expected_subject if expected_subject is not None else manifest_digest(manifest)
     except (TypeError, ValueError):
         return ApprovalVerdict(False, "malformed")
     if approval.get("subject_digest") != digest:
@@ -291,6 +296,54 @@ def verify_attestation(
     if len(staged_statuses) != len(manifest.get("parts") or []) or any(
         status != "succeeded" for status in staged_statuses
     ):
+        return ApprovalVerdict(False, "not_succeeded")
+    return ApprovalVerdict(True, "ok")
+
+
+def attestation_matches_activation(
+    attestation: dict,
+    *,
+    revision_id: str,
+    logical_document_id: str,
+    tenant: str,
+    vault_id: str,
+    access_label: str,
+    trusted_keys: dict[str, str],
+    now: datetime,
+) -> ApprovalVerdict:
+    """Apply-time check of a stored attestation against the activation record."""
+    if not isinstance(attestation, dict):
+        return ApprovalVerdict(False, "malformed")
+    if any(name not in attestation for name in _ATTESTATION_FIELDS):
+        return ApprovalVerdict(False, "malformed")
+    if attestation.get("schema_version") != ATTESTATION_VERSION or attestation.get("role") != "verifier":
+        return ApprovalVerdict(False, "malformed" if attestation.get("schema_version") != ATTESTATION_VERSION else "wrong_role")
+    key_id = attestation.get("key_id")
+    if not isinstance(key_id, str) or key_id not in trusted_keys:
+        return ApprovalVerdict(False, "unknown_key")
+    try:
+        public = _public_key_from_b64(trusted_keys[key_id])
+        signature = _b64decode(attestation.get("signature") or "")
+        public.verify(signature, canonical_bytes(_signed_body(attestation)))
+        expires = _parse_time(attestation.get("expires_at"))
+        moment = _as_utc(now)
+    except (InvalidSignature, ValueError, TypeError):
+        return ApprovalVerdict(False, "bad_signature")
+    if expires <= moment:
+        return ApprovalVerdict(False, "expired")
+    if attestation.get("decision_table_version") not in DECISION_TABLE_VERSIONS:
+        return ApprovalVerdict(False, "unknown_decision_table")
+    if attestation.get("revision_id") != revision_id:
+        return ApprovalVerdict(False, "revision_mismatch")
+    if attestation.get("logical_document_id") != logical_document_id:
+        return ApprovalVerdict(False, "logical_document_mismatch")
+    if attestation.get("tenant") != tenant:
+        return ApprovalVerdict(False, "tenant_mismatch")
+    if attestation.get("vault_id") != vault_id:
+        return ApprovalVerdict(False, "vault_mismatch")
+    if attestation.get("access_label") != access_label:
+        return ApprovalVerdict(False, "access_label_mismatch")
+    if any(part.get("status") != "succeeded" for part in attestation.get("parts") or []):
         return ApprovalVerdict(False, "not_succeeded")
     return ApprovalVerdict(True, "ok")
 
