@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -32,12 +33,119 @@ class LineageDecision:
     authority: dict
 
 
-def is_parser_managed(path: str) -> bool:
-    parts = PurePosixPath(path).parts
-    if ".octopus-kb" not in parts:
-        return False
-    index = parts.index(".octopus-kb")
-    return len(parts) > index + 1 and parts[index + 1] in MANAGED
+def managed_source(root: Path, candidate: str | Path) -> str | None:
+    """Vault-relative path when the file is inside a parser-managed directory.
+
+    Identity is the filesystem object, compared with ``os.path.samefile``.
+    The returned path uses the on-disk names of those directories. A case
+    variant, a ``./`` prefix, a ``..`` traversal, or a symlink alias of the
+    same file all return that one path. Anything else returns None.
+    """
+    vault = Path(root).resolve()
+    raw = Path(candidate)
+    leaf = raw if raw.is_absolute() else vault / raw
+    try:
+        real = leaf.resolve(strict=True)
+    except OSError:
+        return None
+    if not real.is_file():
+        return None
+    try:
+        real.relative_to(vault)
+    except ValueError:
+        return None
+    anchors = []
+    for name in MANAGED:
+        directory = vault / ".octopus-kb" / name
+        if not directory.is_dir():
+            continue
+        try:
+            anchors.append(directory.resolve())
+        except OSError:
+            continue
+    current = real.parent
+    matched = False
+    while True:
+        for anchor in anchors:
+            try:
+                if os.path.samefile(current, anchor):
+                    matched = True
+                    break
+            except OSError:
+                continue
+        if matched or current == vault or current.parent == current:
+            break
+        try:
+            current.relative_to(vault)
+        except ValueError:
+            break
+        current = current.parent
+    if not matched:
+        return None
+    return _on_disk_relative(vault, real)
+
+
+def is_parser_managed(root: Path, path: str | Path) -> bool:
+    return managed_source(root, path) is not None
+
+
+def canonicalize_sources(root: Path, proposal: dict) -> None:
+    """Rewrite managed source paths to their on-disk vault-relative form."""
+    source = proposal.get("source")
+    if isinstance(source, dict) and isinstance(source.get("path"), str):
+        canonical = managed_source(root, source["path"])
+        if canonical is not None:
+            source["path"] = canonical
+    for operation in proposal.get("operations") or []:
+        if not isinstance(operation, dict):
+            continue
+        span = operation.get("source_span")
+        if isinstance(span, dict) and isinstance(span.get("path"), str):
+            canonical = managed_source(root, span["path"])
+            if canonical is not None:
+                span["path"] = canonical
+
+
+def _managed_items(root: Path, proposal: dict) -> list[dict]:
+    found = []
+    for item in proposal_sources(proposal):
+        canonical = managed_source(root, item["path"])
+        if canonical is None:
+            continue
+        found.append({**item, "path": canonical})
+    return found
+
+
+def _on_disk_relative(vault: Path, real: Path) -> str:
+    chain = []
+    current = real
+    while True:
+        try:
+            if os.path.samefile(current, vault):
+                break
+        except OSError:
+            break
+        chain.append(current)
+        if current.parent == current:
+            break
+        current = current.parent
+    names = []
+    parent = vault
+    for node in reversed(chain):
+        name = node.name
+        try:
+            for entry in parent.iterdir():
+                try:
+                    if os.path.samefile(entry, node):
+                        name = entry.name
+                        break
+                except OSError:
+                    continue
+        except OSError:
+            pass
+        names.append(name)
+        parent = parent / name
+    return "/".join(names)
 
 
 def proposal_sources(proposal: dict) -> list[dict]:
@@ -64,7 +172,7 @@ def proposal_sources(proposal: dict) -> list[dict]:
 
 def write_lineage(root: Path, proposal: dict) -> Path | None:
     """Write lineage when every managed source resolves. Otherwise write nothing."""
-    managed = [item for item in proposal_sources(proposal) if is_parser_managed(item["path"])]
+    managed = _managed_items(root, proposal)
     if not managed:
         return None
     sources = []
@@ -86,11 +194,12 @@ def write_lineage(root: Path, proposal: dict) -> Path | None:
 
 
 def resolve_source(root: Path, relpath: str) -> dict | None:
-    if not is_parser_managed(relpath):
+    canonical = managed_source(root, relpath)
+    if canonical is None:
         return None
-    if "/revisions/" in relpath:
-        return _from_revision_page(root, relpath)
-    return _from_part_file(root, relpath)
+    if "/revisions/" in canonical:
+        return _from_revision_page(root, canonical)
+    return _from_part_file(root, canonical)
 
 
 def assess_lineage(
@@ -101,7 +210,7 @@ def assess_lineage(
     now: datetime | None = None,
 ) -> LineageDecision:
     moment = now or datetime.now(timezone.utc)
-    managed = [item for item in proposal_sources(proposal) if is_parser_managed(item["path"])]
+    managed = _managed_items(root, proposal)
     if not managed:
         return LineageDecision(True, "unledgered", {"kind": "unledgered"})
     path = root / ".octopus-kb" / "lineage" / f"{proposal.get('id')}.json"

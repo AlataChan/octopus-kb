@@ -16,7 +16,7 @@ from octopus_kb_compound.ckr.operations import operations_from_proposal
 from octopus_kb_compound.frontmatter import parse_document
 from octopus_kb_compound.lint import lint_pages
 from octopus_kb_compound.models import LintFinding, PageRecord
-from octopus_kb_compound.lineage import assess_lineage, record_apply
+from octopus_kb_compound.lineage import assess_lineage, canonicalize_sources, record_apply
 from octopus_kb_compound.proposals import load_proposal
 from octopus_kb_compound.resolver import require_inside, resolve_vault
 from octopus_kb_compound.validators.declarative import (
@@ -125,6 +125,7 @@ def apply_proposal(
 ) -> ApplyResult:
     root = Path(vault)
     proposal_id = str(proposal["id"])
+    canonicalize_sources(root, proposal)
     decision = assess_lineage(root, proposal, approval=approval, now=now)
     if not decision.allowed:
         record_apply(root, proposal_id, decision.authority, decision.reason)

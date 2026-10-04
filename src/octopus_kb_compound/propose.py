@@ -34,7 +34,7 @@ from octopus_kb_compound.resolver import (
     vault_relative,
 )
 from octopus_kb_compound.frontmatter import parse_document
-from octopus_kb_compound.lineage import write_lineage
+from octopus_kb_compound.lineage import managed_source, write_lineage
 from octopus_kb_compound import llm as llm_mod
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -105,7 +105,8 @@ def propose_from_raw(
     source = require_inside(root, raw_file)
     _validate_inputs(source, root)
 
-    relative = vault_relative(root, source)
+    canonical = managed_source(root, source)
+    relative = canonical if canonical is not None else vault_relative(root, source)
     view = load_view(root)
     if is_revision_tree(relative):
         pinned = view.text_by_path.get(relative)
@@ -118,7 +119,7 @@ def propose_from_raw(
     raw_sha = hashlib.sha256(raw_bytes).hexdigest()
     raw_frontmatter, _ = parse_document(raw_body)
     raw_title = str(raw_frontmatter.get("title") or source.stem)
-    raw_rel_path = _relative_path(source, root)
+    raw_rel_path = relative if canonical is not None else _relative_path(source, root)
 
     try:
         config = load_config(root)
@@ -246,6 +247,8 @@ def propose_from_part(part: dict, vault: Path, *, profile_name: str | None = Non
     source = root / ".octopus-kb" / "part-propose" / f"{digest or 'part'}.md"
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text(body, encoding="utf-8")
+    if managed_source(root, source) is None:
+        raise ProposeInputError("unmanaged_part")
     return propose_from_raw(source, root, profile_name=profile_name, provenance=digest or source.name)
 
 

@@ -90,6 +90,49 @@ def _log(vault: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def _case_insensitive(directory: Path) -> bool:
+    probe = directory / "CaseProbe"
+    probe.mkdir()
+    try:
+        return (directory / "caseprobe").is_dir()
+    finally:
+        probe.rmdir()
+
+
+def _assert_alias_is_gated(monkeypatch, vault: Path, page: str, raw: str) -> None:
+    proposed = _propose(monkeypatch, vault, raw)
+    proposal = json.loads((vault / proposed.path).read_text(encoding="utf-8"))
+    assert proposal["source"]["path"] == page
+    lineage = json.loads(
+        (vault / ".octopus-kb" / "lineage" / f"{proposed.proposal_id}.json").read_text(encoding="utf-8")
+    )
+    assert lineage["sources"][0]["raw_path"] == page
+    result = apply_proposal(vault, proposal, now=NOW)
+    assert result.status != "applied"
+    assert result.message == "approval_required"
+
+
+def test_dot_prefix_traversal_and_symlink_are_lineage_gated(world, monkeypatch):
+    vault, reviewer, _verifier = world
+    _seed_wiki(vault)
+    _built, _result, page = _activate_partial(vault, reviewer)
+    (vault / "raw").mkdir()
+    alias = vault / "alias.md"
+    alias.symlink_to(vault / page)
+    _assert_alias_is_gated(monkeypatch, vault, page, "./" + page)
+    _assert_alias_is_gated(monkeypatch, vault, page, "raw/../" + page)
+    _assert_alias_is_gated(monkeypatch, vault, page, "alias.md")
+
+
+def test_case_variant_is_lineage_gated(world, monkeypatch):
+    vault, reviewer, _verifier = world
+    if not _case_insensitive(vault):
+        pytest.skip("filesystem is case-sensitive")
+    _seed_wiki(vault)
+    _built, _result, page = _activate_partial(vault, reviewer)
+    _assert_alias_is_gated(monkeypatch, vault, page, page.replace(".octopus-kb", ".OCTOPUS-KB"))
+
+
 def test_active_partial_page_is_lineage_gated(world, monkeypatch):
     vault, reviewer, _verifier = world
     _seed_wiki(vault)
