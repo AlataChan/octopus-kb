@@ -97,8 +97,9 @@ def ingest_envelope(
     manifest: dict,
     parts: list[dict],
     approval: dict | None = None,
+    attestation: dict | None = None,
 ) -> dict[str, Any]:
-    return _ingest_envelope(vault_id, manifest, parts, approval)
+    return _ingest_envelope(vault_id, manifest, parts, approval, attestation)
 
 
 def neighbors(vault: str | Path, page: str) -> dict[str, Any]:

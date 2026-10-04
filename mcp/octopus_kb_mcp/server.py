@@ -25,8 +25,14 @@ def kb_ingest(vault: str, markdown: str, title: str | None = None, tags: list[st
 
 
 @mcp.tool()
-def kb_ingest_envelope(vault_id: str, manifest: dict, parts: list[dict], approval: dict | None = None) -> dict:
-    return tools.ingest_envelope(vault_id, manifest, parts, approval)
+def kb_ingest_envelope(
+    vault_id: str,
+    manifest: dict,
+    parts: list[dict],
+    approval: dict | None = None,
+    attestation: dict | None = None,
+) -> dict:
+    return tools.ingest_envelope(vault_id, manifest, parts, approval, attestation)
 
 
 @mcp.tool()

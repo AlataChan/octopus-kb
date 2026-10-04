@@ -80,6 +80,11 @@
         "name": "approval",
         "annotation": "dict | None",
         "default": "None"
+      },
+      {
+        "name": "attestation",
+        "annotation": "dict | None",
+        "default": "None"
       }
     ],
     "returns": "dict"

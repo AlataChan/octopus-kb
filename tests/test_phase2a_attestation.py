@@ -21,6 +21,7 @@ from octopus_kb_compound.approvals import (
     verify_approval,
     verify_attestation,
 )
+from octopus_kb_compound.cli import main
 from octopus_kb_compound.envelope import DURABILITY_LOG, aggregate_status, ingest_envelope
 from octopus_kb_compound.frontmatter import render_frontmatter
 from octopus_kb_compound.jsoncanon import canonical_bytes
@@ -296,6 +297,33 @@ def test_old_activation_record_without_authority_still_reads(tmp_path):
     page = f".octopus-kb/revisions/{revision}/0000.md"
     assert view.provenance[page]["ledger_status"] == "consistent_unverified"
     assert view.provenance[page]["authority"]["kind"] == "approval"
+
+
+def test_cli_passes_an_attestation(world, capsys):
+    vault, _reviewer, verifier = world
+    built = _succeeded(vault, verifier, "cli body", placement="manuals/cli.docx")
+    attestation = dict(built["attestation"])
+    attestation["expires_at"] = "2099-01-01T00:00:00Z"
+    attestation["signature"] = sign_attestation(attestation, verifier)
+    manifest_path = vault / "manifest.json"
+    parts_path = vault / "parts.json"
+    attestation_path = vault / "attestation.json"
+    manifest_path.write_text(json.dumps(built["manifest"]), encoding="utf-8")
+    parts_path.write_text(json.dumps(built["parts"]), encoding="utf-8")
+    attestation_path.write_text(json.dumps(attestation), encoding="utf-8")
+    code = main([
+        "ingest-envelope",
+        "--vault-id",
+        VAULT_ID,
+        "--manifest",
+        str(manifest_path),
+        "--parts",
+        str(parts_path),
+        "--attestation",
+        str(attestation_path),
+    ])
+    assert code == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "activated"
 
 
 def _succeeded(vault, private, body, *, placement):

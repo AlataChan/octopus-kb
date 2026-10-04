@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     envelope_parser.add_argument("--manifest", required=True, type=Path)
     envelope_parser.add_argument("--parts", required=True, type=Path)
     envelope_parser.add_argument("--approval", type=Path)
+    envelope_parser.add_argument("--attestation", type=Path)
 
     ingest_file_parser = subparsers.add_parser("ingest-file", help="Convert a local file and write it into raw/ as a markdown source.")
     ingest_file_parser.add_argument("path", type=Path)
@@ -268,7 +269,8 @@ def _main(argv: list[str] | None = None) -> int:
         manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
         parts = json.loads(args.parts.read_text(encoding="utf-8"))
         approval = json.loads(args.approval.read_text(encoding="utf-8")) if args.approval else None
-        result = ingest_envelope(args.vault_id, manifest, parts, approval)
+        attestation = json.loads(args.attestation.read_text(encoding="utf-8")) if args.attestation else None
+        result = ingest_envelope(args.vault_id, manifest, parts, approval, attestation)
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
