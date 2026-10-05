@@ -387,6 +387,26 @@ def test_changed_body_with_original_digest_is_refused_before_model(world, monkey
         assert not (vault / ".octopus-kb" / "part-propose" / f"{digest}.md").exists()
 
 
+def test_propose_from_part_accepts_the_staged_body_named_by_its_digest(world, monkeypatch):
+    vault, reviewer, _verifier = world
+    _seed_wiki(vault)
+    built, _result, _page = _activate_partial(vault, reviewer)
+    part = built["parts"][0]
+    stub = {"body": part["body"], "part_digest": part["part_digest"]}
+    _allow_default_endpoint(monkeypatch)
+    calls = _install_transport(monkeypatch, [_proposal("part"), _proposal("should-not-run")])
+    proposed = propose_from_part(stub, vault)
+    assert proposed.proposal_id
+    assert calls
+    forged = {"body": FORGED_BODY, "part_digest": part["part_digest"]}
+    sent = len(calls)
+    with pytest.raises(ProposeInputError):
+        propose_from_part(forged, vault)
+    assert len(calls) == sent
+    written = (vault / ".octopus-kb" / "part-propose" / f"{part['part_digest']}.md").read_text(encoding="utf-8")
+    assert written == part["body"]
+
+
 def test_lineage_creation_rejects_raw_bytes_that_differ_from_the_staged_part(world):
     vault, reviewer, _verifier = world
     _seed_wiki(vault)

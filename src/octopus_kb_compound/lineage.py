@@ -397,10 +397,11 @@ def trusted_part_binding(
 ) -> TrustedPartBinding | None:
     """Resolve the staged part that authorizes ``relpath``.
 
-    A caller-supplied part is accepted only when a staged part exists for the
-    claimed digest, the recomputed digest matches, and the canonical bytes are
-    equal. The returned raw bytes come from that staged part. No staged part
-    returns None so an unbound part can still be proposed.
+    A full caller part must recompute to the claimed digest and match the
+    staged bytes. A caller that sends only the body and digest is accepted
+    when that body is the staged body. A changed body is refused. No staged
+    part returns None so an unbound part can still be proposed. The returned
+    raw bytes come from the staged part.
     """
     canonical = managed_source(root, relpath)
     if canonical is None:
@@ -408,16 +409,23 @@ def trusted_part_binding(
     part = _part_for_managed_path(root, canonical)
     if part is None:
         return None
-    if proposed is not None:
-        if not _proposed_matches_path(proposed, canonical):
-            raise PartBindingError("part_digest_mismatch")
-        if canonical_bytes(proposed) != canonical_bytes(part):
-            raise PartBindingError("part_digest_mismatch")
+    if proposed is not None and not _caller_matches_staged(proposed, part, canonical):
+        raise PartBindingError("part_digest_mismatch")
     if "/revisions/" in canonical:
         raw = revision_page_text(part).encode("utf-8")
     else:
         raw = str(part.get("body") or "").encode("utf-8")
     return TrustedPartBinding(part=part, raw_path=canonical, raw_bytes=raw)
+
+
+def _caller_matches_staged(proposed: dict, staged: dict, canonical: str) -> bool:
+    claimed = proposed.get("part_digest")
+    name = PurePosixPath(canonical).name.removesuffix(".md")
+    if not isinstance(claimed, str) or claimed != staged.get("part_digest") or claimed != name:
+        return False
+    if set(proposed) <= {"body", "part_digest"}:
+        return str(proposed.get("body") or "") == str(staged.get("body") or "")
+    return _proposed_matches_path(proposed, canonical) and canonical_bytes(proposed) == canonical_bytes(staged)
 
 
 def _proposed_matches_path(part: dict, relpath: str) -> bool:
