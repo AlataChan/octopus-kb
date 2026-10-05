@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from octopus_kb_compound.apply import apply_proposal
 from octopus_kb_compound.approvals import parse_private_key, public_key_b64
 from octopus_kb_compound.inbox import accept_inbox
 from octopus_kb_compound.lineage import assess_lineage, file_sha256, managed_source, write_lineage
-from octopus_kb_compound.propose import propose_from_part, propose_from_raw
+from octopus_kb_compound.propose import ProposeInputError, propose_from_part, propose_from_raw
 from octopus_kb_compound import envelope as envelope_mod
 
 from tests.test_phase1c_controls import _install_transport, _proposal
@@ -227,7 +228,7 @@ def test_multi_source_requires_every_source_and_legacy_stays_unledgered(world, m
     part = built["parts"][0]
     extra = vault / ".octopus-kb" / "part-propose" / f"{part['part_digest']}.md"
     extra.parent.mkdir(parents=True, exist_ok=True)
-    extra.write_text("ledger_status: succeeded\n", encoding="utf-8")
+    extra.write_bytes(part["body"].encode("utf-8"))
     proposal["operations"][0]["source_span"] = {
         "path": extra.relative_to(vault).as_posix(),
         "start_line": 1,
@@ -351,3 +352,77 @@ def test_hard_link_alias_is_lineage_gated_on_apply_and_inbox(world, monkeypatch)
     assert proposal["source"]["path"] == page
     _park_inbox(vault, proposal)
     assert accept_inbox(vault, proposal["id"], now=NOW).message == "approval_required"
+
+
+FORGED_BODY = "Completely unapproved replacement body."
+
+
+def _forged_part(part: dict) -> dict:
+    forged = dict(part)
+    forged["body"] = FORGED_BODY
+    return forged
+
+
+def test_changed_body_with_original_digest_is_refused_before_model(world, monkeypatch):
+    vault, reviewer, verifier = world
+    _seed_wiki(vault)
+    approved, _result, _page = _activate_partial(vault, reviewer)
+    attested = _succeeded(vault, verifier, "attested body", placement="manuals/attested-binding.docx")
+    activated = ingest_envelope(
+        VAULT_ID,
+        attested["manifest"],
+        attested["parts"],
+        None,
+        attested["attestation"],
+        now=NOW,
+    )
+    assert activated["status"] == "activated"
+    _allow_default_endpoint(monkeypatch)
+    for built in (approved, attested):
+        calls = _install_transport(monkeypatch, [_proposal("should-not-run")])
+        digest = built["parts"][0]["part_digest"]
+        with pytest.raises(ProposeInputError):
+            propose_from_part(_forged_part(built["parts"][0]), vault)
+        assert calls == []
+        assert not (vault / ".octopus-kb" / "part-propose" / f"{digest}.md").exists()
+
+
+def test_lineage_creation_rejects_raw_bytes_that_differ_from_the_staged_part(world):
+    vault, reviewer, _verifier = world
+    _seed_wiki(vault)
+    built, _result, _page = _activate_partial(vault, reviewer)
+    part = built["parts"][0]
+    rel = f".octopus-kb/part-propose/{part['part_digest']}.md"
+    target = vault / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(FORGED_BODY, encoding="utf-8")
+    proposal = {
+        "id": "forged-lineage",
+        "source": {
+            "kind": "raw_file",
+            "path": rel,
+            "sha256": hashlib.sha256(FORGED_BODY.encode("utf-8")).hexdigest(),
+        },
+    }
+    assert write_lineage(vault, proposal) is None
+    assert not (vault / ".octopus-kb" / "lineage" / "forged-lineage.json").exists()
+
+
+def test_apply_rejects_raw_bytes_that_differ_from_the_staged_part(world, monkeypatch):
+    vault, reviewer, _verifier = world
+    _seed_wiki(vault)
+    built, _result, _page = _activate_partial(vault, reviewer)
+    _allow_default_endpoint(monkeypatch)
+    _install_transport(monkeypatch, [_proposal("part")])
+    proposed = propose_from_part(built["parts"][0], vault)
+    lineage_path = vault / ".octopus-kb" / "lineage" / f"{proposed.proposal_id}.json"
+    recorded = json.loads(lineage_path.read_text(encoding="utf-8"))
+    target = vault / recorded["sources"][0]["raw_path"]
+    target.write_text(FORGED_BODY, encoding="utf-8")
+    forged_hash = hashlib.sha256(target.read_bytes()).hexdigest()
+    recorded["sources"][0]["raw_sha256"] = forged_hash
+    lineage_path.write_text(json.dumps(recorded), encoding="utf-8")
+    proposal = json.loads((vault / proposed.path).read_text(encoding="utf-8"))
+    proposal["source"]["sha256"] = forged_hash
+    refused = apply_proposal(vault, proposal, approval=built["approval"], now=NOW)
+    assert refused.status == "rejected"

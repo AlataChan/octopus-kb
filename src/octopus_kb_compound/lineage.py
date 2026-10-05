@@ -19,8 +19,11 @@ from octopus_kb_compound.approvals import (
     attestation_matches_activation,
     load_approval_keys,
     load_verifier_keys,
+    part_digest,
     verify_approval,
 )
+from octopus_kb_compound.envelope import revision_page_text
+from octopus_kb_compound.jsoncanon import canonical_bytes
 
 
 MANAGED = ("part-propose", "revisions")
@@ -31,6 +34,23 @@ class LineageDecision:
     allowed: bool
     reason: str
     authority: dict
+
+
+@dataclass(frozen=True)
+class TrustedPartBinding:
+    """Staged part and the raw bytes that part authorizes."""
+
+    part: dict
+    raw_path: str
+    raw_bytes: bytes
+
+
+class PartBindingError(ValueError):
+    """A caller part disagrees with the staged part it claims."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(reason)
 
 
 def managed_source(root: Path, candidate: str | Path) -> str | None:
@@ -369,7 +389,97 @@ def _from_part_file(root: Path, relpath: str) -> dict | None:
     return None
 
 
-def _entry(relpath: str, record: dict, part: dict, root: Path) -> dict:
+def trusted_part_binding(
+    root: Path,
+    relpath: str,
+    *,
+    proposed: dict | None = None,
+) -> TrustedPartBinding | None:
+    """Resolve the staged part that authorizes ``relpath``.
+
+    A caller-supplied part is accepted only when a staged part exists for the
+    claimed digest, the recomputed digest matches, and the canonical bytes are
+    equal. The returned raw bytes come from that staged part. No staged part
+    returns None so an unbound part can still be proposed.
+    """
+    canonical = managed_source(root, relpath)
+    if canonical is None:
+        return None
+    part = _part_for_managed_path(root, canonical)
+    if part is None:
+        return None
+    if proposed is not None:
+        if not _proposed_matches_path(proposed, canonical):
+            raise PartBindingError("part_digest_mismatch")
+        if canonical_bytes(proposed) != canonical_bytes(part):
+            raise PartBindingError("part_digest_mismatch")
+    if "/revisions/" in canonical:
+        raw = revision_page_text(part).encode("utf-8")
+    else:
+        raw = str(part.get("body") or "").encode("utf-8")
+    return TrustedPartBinding(part=part, raw_path=canonical, raw_bytes=raw)
+
+
+def _proposed_matches_path(part: dict, relpath: str) -> bool:
+    if not isinstance(part, dict):
+        return False
+    try:
+        digest = part_digest(part)
+    except (TypeError, ValueError):
+        return False
+    claimed = part.get("part_digest")
+    name = PurePosixPath(relpath).name.removesuffix(".md")
+    return isinstance(claimed, str) and claimed == digest == name
+
+
+def _part_for_managed_path(root: Path, canonical: str) -> dict | None:
+    if "/revisions/" in canonical:
+        parts = PurePosixPath(canonical).parts
+        try:
+            revision = parts[parts.index("revisions") + 1]
+        except (ValueError, IndexError):
+            return None
+        record = _activation_for_revision(root, revision)
+        if record is None:
+            return None
+        logical = str(record.get("logical_document_id") or "")
+        return _staged_part(root, logical, revision, canonical)
+    return _part_by_digest(root, PurePosixPath(canonical).name.removesuffix(".md"))
+
+
+def _part_by_digest(root: Path, digest: str) -> dict | None:
+    if not digest:
+        return None
+    staging = root / ".octopus-kb" / "staging"
+    if not staging.is_dir():
+        return None
+    found: list[dict] = []
+    for path in staging.glob(f"*/*/{digest}.json"):
+        try:
+            part = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(part, dict) and part.get("part_digest") == digest:
+            found.append(part)
+    if not found:
+        return None
+    first = canonical_bytes(found[0])
+    if any(canonical_bytes(item) != first for item in found[1:]):
+        return None
+    return found[0]
+
+
+def _entry(relpath: str, record: dict, part: dict, root: Path) -> dict | None:
+    binding = trusted_part_binding(root, relpath)
+    if binding is None or binding.part.get("part_digest") != part.get("part_digest"):
+        return None
+    try:
+        actual = (root / relpath).read_bytes()
+    except OSError:
+        return None
+    if actual != binding.raw_bytes:
+        return None
+    part = binding.part
     authority = record.get("authority")
     if not isinstance(authority, dict):
         authority = activation_authority(record)

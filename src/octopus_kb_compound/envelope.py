@@ -435,7 +435,8 @@ def _commit(
     _fsync_dir(active_dir, "active-dir")
 
 
-def _render_page(root: Path, revision_dir: Path, part: dict) -> str:
+def revision_page_text(part: dict) -> str:
+    """Rendered revision page authorized by a staged part."""
     title = str(part["part_id"])
     meta = PageMeta(
         title=title,
@@ -451,7 +452,11 @@ def _render_page(root: Path, revision_dir: Path, part: dict) -> str:
         ref = asset_reference(asset["asset_id"], asset["hash"])
         if ref not in body:
             body = f"{body}\n\n{ref}" if body else ref
-    text = f"{render_frontmatter(meta)}\n{body}\n" if body else f"{render_frontmatter(meta)}\n"
+    return f"{render_frontmatter(meta)}\n{body}\n" if body else f"{render_frontmatter(meta)}\n"
+
+
+def _render_page(root: Path, revision_dir: Path, part: dict) -> str:
+    text = revision_page_text(part)
     filename = f"{int(part['index']):04d}.md"
     _write_fsync(revision_dir / filename, text.encode("utf-8"), "revision-file")
     return (revision_dir / filename).resolve().relative_to(root.resolve()).as_posix()

@@ -34,7 +34,12 @@ from octopus_kb_compound.resolver import (
     vault_relative,
 )
 from octopus_kb_compound.frontmatter import parse_document
-from octopus_kb_compound.lineage import managed_source, write_lineage
+from octopus_kb_compound.lineage import (
+    PartBindingError,
+    managed_source,
+    trusted_part_binding,
+    write_lineage,
+)
 from octopus_kb_compound import llm as llm_mod
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -240,16 +245,33 @@ def _stamp_proposal(
 
 
 def propose_from_part(part: dict, vault: Path, *, profile_name: str | None = None) -> ProposeResult:
-    """Propose one envelope part. The prompt contains that part and no others."""
+    """Propose one envelope part. The prompt contains that part and no others.
+
+    The caller digest is recomputed and compared to the staged part before
+    any raw file is written and before a model is called.
+    """
     root = resolve_vault(vault)
-    body = str(part.get("body") or "")
-    digest = str(part.get("part_digest") or "")
-    source = root / ".octopus-kb" / "part-propose" / f"{digest or 'part'}.md"
+    if not isinstance(part, dict):
+        raise ProposeInputError("part_digest_mismatch")
+    claimed = part.get("part_digest")
+    if not isinstance(claimed, str) or not claimed:
+        raise ProposeInputError("part_digest_mismatch")
+    relpath = f".octopus-kb/part-propose/{claimed}.md"
+    try:
+        binding = trusted_part_binding(root, relpath, proposed=part)
+    except PartBindingError as exc:
+        raise ProposeInputError(exc.reason) from exc
+    source = root / (binding.raw_path if binding is not None else relpath)
     source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_text(body, encoding="utf-8")
+    if binding is None:
+        source.write_text(str(part.get("body") or ""), encoding="utf-8")
+        provenance = claimed
+    else:
+        source.write_bytes(binding.raw_bytes)
+        provenance = str(binding.part.get("part_digest") or claimed)
     if managed_source(root, source) is None:
         raise ProposeInputError("unmanaged_part")
-    return propose_from_raw(source, root, profile_name=profile_name, provenance=digest or source.name)
+    return propose_from_raw(source, root, profile_name=profile_name, provenance=provenance)
 
 
 def _request_proposal_json(
