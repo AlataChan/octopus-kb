@@ -25,8 +25,14 @@ def kb_ingest(vault: str, markdown: str, title: str | None = None, tags: list[st
 
 
 @mcp.tool()
-def kb_ingest_envelope(vault_id: str, manifest: dict, parts: list[dict], approval: dict | None = None) -> dict:
-    return tools.ingest_envelope(vault_id, manifest, parts, approval)
+def kb_ingest_envelope(
+    vault_id: str,
+    manifest: dict,
+    parts: list[dict],
+    approval: dict | None = None,
+    attestation: dict | None = None,
+) -> dict:
+    return tools.ingest_envelope(vault_id, manifest, parts, approval, attestation)
 
 
 @mcp.tool()
@@ -45,8 +51,13 @@ def kb_propose(vault: str, raw_path: str, profile: dict | None = None) -> dict:
 
 
 @mcp.tool()
-def kb_validate(vault: str, proposal_path: str, apply: bool = False) -> dict:
-    return tools.validate(vault, proposal_path, apply=apply)
+def kb_validate(
+    vault: str,
+    proposal_path: str,
+    apply: bool = False,
+    approval: dict | None = None,
+) -> dict:
+    return tools.validate(vault, proposal_path, apply=apply, approval=approval)
 
 
 def main() -> None:

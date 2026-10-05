@@ -1,0 +1,718 @@
+{
+  "label": "TEST ONLY. These Ed25519 keys are fixtures for shared verification vectors. They are not production keys and must not be deployed.",
+  "verifier": {
+    "key_id": "test-only-verifier-ed25519",
+    "private_key_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIB3/kjoggm7n5XtLkli1PepGv80F3cNRuOl+IlUkHAP+\n-----END PRIVATE KEY-----\n",
+    "public_key_b64": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+  },
+  "reviewer": {
+    "key_id": "test-only-ed25519",
+    "private_key_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIHXdBHsh1RW+cFMdi9/7aDFuvBx+7E8o2klOKzYTtjup\n-----END PRIVATE KEY-----\n",
+    "public_key_b64": "QjjxcE4NnGl9msBj8hoOnCuijhA0OuUiuvqOUExNv8c="
+  },
+  "manifest_0_1_0": {
+    "schema_version": "revision-manifest/0.1.0",
+    "tenant": "tenant-a",
+    "vault_id": "vault-1",
+    "access_label": "internal",
+    "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+    "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+    "parent_revision_id": null,
+    "parts": [
+      {
+        "part_id": "part:0",
+        "index": 0,
+        "part_digest": "abababababababababababababababababababababababababababababababab"
+      }
+    ],
+    "status": "consistent_unverified",
+    "redaction_policy": "none/0.1.0",
+    "policy_version": "policy/0.1.0",
+    "revision_id": "ae52505b1f33f72e360bff6a52a53741063a6b4250ac707a936acafb891f281a"
+  },
+  "digest_0_1_0": "ae52505b1f33f72e360bff6a52a53741063a6b4250ac707a936acafb891f281a",
+  "manifest_0_2_0": {
+    "schema_version": "revision-manifest/0.2.0",
+    "tenant": "tenant-a",
+    "vault_id": "vault-1",
+    "access_label": "internal",
+    "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+    "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+    "parent_revision_id": null,
+    "parts": [
+      {
+        "part_id": "part:0",
+        "index": 0,
+        "part_digest": "abababababababababababababababababababababababababababababababab"
+      }
+    ],
+    "status": "succeeded",
+    "redaction_policy": "none/0.1.0",
+    "policy_version": "policy/0.1.0",
+    "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+    "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+  },
+  "digest_0_2_0": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+  "manifest_0_2_0_without_ref": {
+    "schema_version": "revision-manifest/0.2.0",
+    "tenant": "tenant-a",
+    "vault_id": "vault-1",
+    "access_label": "internal",
+    "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+    "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+    "parent_revision_id": null,
+    "parts": [
+      {
+        "part_id": "part:0",
+        "index": 0,
+        "part_digest": "abababababababababababababababababababababababababababababababab"
+      }
+    ],
+    "status": "succeeded",
+    "redaction_policy": "none/0.1.0",
+    "policy_version": "policy/0.1.0",
+    "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+  },
+  "attestation": {
+    "schema_version": "verification-attestation/0.1.0",
+    "role": "verifier",
+    "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+    "key_id": "test-only-verifier-ed25519",
+    "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+    "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+    "tenant": "tenant-a",
+    "vault_id": "vault-1",
+    "access_label": "internal",
+    "parts": [
+      {
+        "index": 0,
+        "part_digest": "abababababababababababababababababababababababababababababababab",
+        "status": "succeeded"
+      }
+    ],
+    "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "validator_registry_version": "validator-registry/0.1.0",
+    "probe_scorer_version": "probe-scorer/0.1.0",
+    "decision_table_version": "decision-table/0.1.0",
+    "issued_at": "2026-10-02T12:00:00Z",
+    "expires_at": "2026-10-03T12:00:00Z",
+    "signature": "MUCEiH2OoOPd2Ntj2LKmn2dF7LG3ghUv1eLlkS3h7M+j4pfYKsPShZtko3FVxb1IntZPjjczlj7RDJM9lpHqBw=="
+  },
+  "cases": [
+    {
+      "name": "valid",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "MUCEiH2OoOPd2Ntj2LKmn2dF7LG3ghUv1eLlkS3h7M+j4pfYKsPShZtko3FVxb1IntZPjjczlj7RDJM9lpHqBw=="
+      },
+      "ok": true,
+      "reason": "ok",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "forged_succeeded",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "biilac6VJibb4P1bLOGCOmGw4c2IAh61ee5nRSwM67emNUEG2jc+y+YPbYn+FNl1B6nJBYya01BDvAHdBP2+CQ=="
+      },
+      "ok": false,
+      "reason": "bad_signature",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "changed_body",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdce",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "MUCEiH2OoOPd2Ntj2LKmn2dF7LG3ghUv1eLlkS3h7M+j4pfYKsPShZtko3FVxb1IntZPjjczlj7RDJM9lpHqBw=="
+      },
+      "ok": false,
+      "reason": "bad_signature",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "changed_destination",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "MUCEiH2OoOPd2Ntj2LKmn2dF7LG3ghUv1eLlkS3h7M+j4pfYKsPShZtko3FVxb1IntZPjjczlj7RDJM9lpHqBw=="
+      },
+      "ok": false,
+      "reason": "vault_mismatch",
+      "tenant": "tenant-a",
+      "vault_id": "vault-9",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "unknown_verifier_key",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "unknown-verifier",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "MUCEiH2OoOPd2Ntj2LKmn2dF7LG3ghUv1eLlkS3h7M+j4pfYKsPShZtko3FVxb1IntZPjjczlj7RDJM9lpHqBw=="
+      },
+      "ok": false,
+      "reason": "unknown_key",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "reviewer_key_as_verifier",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "aL/MBC2bS7WIRv2dXYRG/8iPejw2XId80hgtUUJzlsPAd3P2tLptJh5mszC9AoKWYz5JO/hI8d2S865KTVXgBw=="
+      },
+      "ok": false,
+      "reason": "unknown_key",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "unknown_decision_table",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/9.9.9",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "kpGAxt1rj6H9CX2rUz07P/jEJ5Ioby0KrESjgk4XFLUIrtJVeoS33c9Z/j7PNPR81ZEDhxWNfoSL9m+rgNucCA=="
+      },
+      "ok": false,
+      "reason": "unknown_decision_table",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "expired",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-02T12:00:00Z",
+        "signature": "wedh/GWz6G9qXonup69bg0krQlSHHIAQSUu8U+ebgNx5HV73tuWBND0lQ02b3QyQYeA1Tfzy32DC95hhZ/XoBg=="
+      },
+      "ok": false,
+      "reason": "expired",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "replayed_revision",
+      "kind": "attestation",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "other/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "86c1434cf71736a40645524a1476b4f5d9ba3ebb35155430164e06f0661389a8"
+      },
+      "attestation": {
+        "schema_version": "verification-attestation/0.1.0",
+        "role": "verifier",
+        "attestation_id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "key_id": "test-only-verifier-ed25519",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "parts": [
+          {
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab",
+            "status": "succeeded"
+          }
+        ],
+        "catalog_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "validator_registry_version": "validator-registry/0.1.0",
+        "probe_scorer_version": "probe-scorer/0.1.0",
+        "decision_table_version": "decision-table/0.1.0",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "signature": "MUCEiH2OoOPd2Ntj2LKmn2dF7LG3ghUv1eLlkS3h7M+j4pfYKsPShZtko3FVxb1IntZPjjczlj7RDJM9lpHqBw=="
+      },
+      "ok": false,
+      "reason": "revision_mismatch",
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+      "now": "2026-10-02T18:00:00Z",
+      "staged_statuses": [
+        "succeeded"
+      ],
+      "verifier_keys": {
+        "test-only-verifier-ed25519": "bq7OZOipqUzyo+rgEVpaBlNQ1BiY2q8WefjyLPfmXIY="
+      }
+    },
+    {
+      "name": "verifier_key_as_reviewer",
+      "kind": "approval",
+      "manifest": {
+        "schema_version": "revision-manifest/0.2.0",
+        "tenant": "tenant-a",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "placement": "tenant:tenant-a|container:|path:manuals/sample.docx",
+        "logical_document_id": "e43c06bebc6420092a7e2b133a1d54f21df5bf1fa34e259ada8664f8afd6de09",
+        "parent_revision_id": null,
+        "parts": [
+          {
+            "part_id": "part:0",
+            "index": 0,
+            "part_digest": "abababababababababababababababababababababababababababababababab"
+          }
+        ],
+        "status": "succeeded",
+        "redaction_policy": "none/0.1.0",
+        "policy_version": "policy/0.1.0",
+        "verification_ref": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+        "revision_id": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b"
+      },
+      "approval": {
+        "approval_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenant": "tenant-a",
+        "action": "publish",
+        "subject_digest": "df188a63436db4a6b5c5f6b8bc70beebc87d81ba5da7073e9103f5b3a6cece4b",
+        "vault_id": "vault-1",
+        "access_label": "internal",
+        "scope": "full",
+        "reviewer": "reviewer-1",
+        "issued_at": "2026-10-02T12:00:00Z",
+        "expires_at": "2026-10-03T12:00:00Z",
+        "key_id": "test-only-verifier-ed25519",
+        "signature": "1V0JLG7pRKsdEJ5Y9Tcf20KAzf/x9wj5YdtX1u1fsvvKR3IwJJx6HPwFD99aPh7/+R+63O6NyOY1+cYDSX44DA=="
+      },
+      "tenant": "tenant-a",
+      "vault_id": "vault-1",
+      "access_label": "internal",
+      "now": "2026-10-02T18:00:00Z",
+      "approval_keys": {
+        "test-only-ed25519": "QjjxcE4NnGl9msBj8hoOnCuijhA0OuUiuvqOUExNv8c="
+      },
+      "ok": false,
+      "reason": "unknown_key"
+    }
+  ]
+}

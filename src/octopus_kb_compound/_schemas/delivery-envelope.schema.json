@@ -1,95 +1,363 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://octopus.local/schemas/delivery-envelope.schema.json",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "tenant",
-    "logical_document_id",
-    "access_label",
-    "content_sha256",
-    "part_id",
-    "index",
-    "ledger_status",
-    "ledger_ref",
-    "body",
-    "assets",
-    "relations",
-    "extraction_key",
-    "projection_key",
-    "part_digest"
-  ],
-  "properties": {
-    "schema_version": {"const": "delivery-envelope/0.1.0"},
-    "tenant": {"type": "string", "minLength": 1},
-    "logical_document_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "access_label": {"type": "string", "minLength": 1},
-    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "part_id": {"type": "string", "minLength": 1},
-    "index": {"type": "integer", "minimum": 0},
-    "ledger_status": {"enum": ["consistent_unverified", "completed_partial"]},
-    "ledger_ref": {"type": "string", "minLength": 1},
-    "body": {"type": "string"},
-    "assets": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["hash", "owner_node_id", "asset_id"],
-        "properties": {
-          "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-          "owner_node_id": {"type": "string", "minLength": 1},
-          "asset_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "tenant",
+        "logical_document_id",
+        "access_label",
+        "content_sha256",
+        "part_id",
+        "index",
+        "ledger_status",
+        "ledger_ref",
+        "body",
+        "assets",
+        "relations",
+        "extraction_key",
+        "projection_key",
+        "part_digest"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "delivery-envelope/0.1.0"
+        },
+        "tenant": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logical_document_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "access_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "part_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ledger_status": {
+          "enum": [
+            "consistent_unverified",
+            "completed_partial"
+          ]
+        },
+        "ledger_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string"
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hash",
+              "owner_node_id",
+              "asset_id"
+            ],
+            "properties": {
+              "hash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "owner_node_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "asset_id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        "relations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "owners",
+            "spans",
+            "captions",
+            "continues"
+          ],
+          "properties": {
+            "owners": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "owner_node_id"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "owner_node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "spans": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "span"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "span": {
+                    "type": "object"
+                  }
+                }
+              }
+            },
+            "captions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "text"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "continues": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "extraction_key": {
+          "type": "object"
+        },
+        "projection_key": {
+          "type": "object"
+        },
+        "part_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
       }
     },
-    "relations": {
+    {
       "type": "object",
       "additionalProperties": false,
-      "required": ["owners", "spans", "captions", "continues"],
+      "required": [
+        "schema_version",
+        "tenant",
+        "logical_document_id",
+        "access_label",
+        "content_sha256",
+        "part_id",
+        "index",
+        "ledger_status",
+        "ledger_ref",
+        "body",
+        "assets",
+        "relations",
+        "extraction_key",
+        "projection_key",
+        "part_digest"
+      ],
       "properties": {
-        "owners": {
+        "schema_version": {
+          "const": "delivery-envelope/0.2.0"
+        },
+        "tenant": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logical_document_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "access_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "part_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ledger_status": {
+          "enum": [
+            "succeeded",
+            "consistent_unverified",
+            "completed_partial"
+          ]
+        },
+        "ledger_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string"
+        },
+        "assets": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["node_id", "owner_node_id"],
+            "required": [
+              "hash",
+              "owner_node_id",
+              "asset_id"
+            ],
             "properties": {
-              "node_id": {"type": "string", "minLength": 1},
-              "owner_node_id": {"type": "string", "minLength": 1}
+              "hash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "owner_node_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "asset_id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
             }
           }
         },
-        "spans": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["node_id", "span"],
-            "properties": {
-              "node_id": {"type": "string", "minLength": 1},
-              "span": {"type": "object"}
+        "relations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "owners",
+            "spans",
+            "captions",
+            "continues"
+          ],
+          "properties": {
+            "owners": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "owner_node_id"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "owner_node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "spans": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "span"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "span": {
+                    "type": "object"
+                  }
+                }
+              }
+            },
+            "captions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "text"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "continues": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           }
         },
-        "captions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["node_id", "text"],
-            "properties": {
-              "node_id": {"type": "string", "minLength": 1},
-              "text": {"type": "string"}
-            }
-          }
+        "extraction_key": {
+          "type": "object"
         },
-        "continues": {"type": ["string", "null"]}
+        "projection_key": {
+          "type": "object"
+        },
+        "part_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
-    },
-    "extraction_key": {"type": "object"},
-    "projection_key": {"type": "object"},
-    "part_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-  }
+    }
+  ]
 }

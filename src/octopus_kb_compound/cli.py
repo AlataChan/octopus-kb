@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     envelope_parser.add_argument("--manifest", required=True, type=Path)
     envelope_parser.add_argument("--parts", required=True, type=Path)
     envelope_parser.add_argument("--approval", type=Path)
+    envelope_parser.add_argument("--attestation", type=Path)
 
     ingest_file_parser = subparsers.add_parser("ingest-file", help="Convert a local file and write it into raw/ as a markdown source.")
     ingest_file_parser.add_argument("path", type=Path)
@@ -137,6 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser.add_argument("proposal", type=Path)
     validate_parser.add_argument("--vault", required=True, type=Path)
     validate_parser.add_argument("--apply", action="store_true")
+    validate_parser.add_argument("--approval", type=Path)
     validate_parser.add_argument("--json", action="store_true")
 
     recover_parser = subparsers.add_parser("recover", help="Recover a proposal apply interrupted mid-commit.")
@@ -148,6 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
     inbox_parser.add_argument("--list", action="store_true")
     inbox_parser.add_argument("--review")
     inbox_parser.add_argument("--accept", action="store_true")
+    inbox_parser.add_argument("--approval", type=Path)
     inbox_parser.add_argument("--reject", action="store_true")
     inbox_parser.add_argument("--reason", default="")
     inbox_parser.add_argument("--json", action="store_true")
@@ -268,7 +271,8 @@ def _main(argv: list[str] | None = None) -> int:
         manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
         parts = json.loads(args.parts.read_text(encoding="utf-8"))
         approval = json.loads(args.approval.read_text(encoding="utf-8")) if args.approval else None
-        result = ingest_envelope(args.vault_id, manifest, parts, approval)
+        attestation = json.loads(args.attestation.read_text(encoding="utf-8")) if args.attestation else None
+        result = ingest_envelope(args.vault_id, manifest, parts, approval, attestation)
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
@@ -450,6 +454,7 @@ def _main(argv: list[str] | None = None) -> int:
                 args.proposal,
                 args.vault,
                 apply=args.apply,
+                approval=_load_approval(args.approval),
             ).to_dict()
         except ValidateInputError as exc:
             print(str(exc), file=sys.stderr)
@@ -481,7 +486,7 @@ def _main(argv: list[str] | None = None) -> int:
             if args.list:
                 result = list_inbox(args.vault)
             elif args.review and args.accept:
-                result = accept_inbox(args.vault, args.review).to_dict()
+                result = accept_inbox(args.vault, args.review, approval=_load_approval(args.approval)).to_dict()
             elif args.review and args.reject:
                 if not args.reason:
                     print("--reason is required with --reject", file=sys.stderr)
@@ -644,6 +649,12 @@ def _print_neighbors_result(result: dict) -> None:
         print(f"outbound\t{outbound['path']}\t{outbound['via']}")
     for command in result["next"]:
         print(f"next\t{command}")
+
+
+def _load_approval(path: Path | None) -> dict | None:
+    if path is None:
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _print_apply_result(result: dict) -> None:

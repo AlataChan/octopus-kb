@@ -7,13 +7,19 @@ under a per-document lock, in this precedence:
 2. this revision is already active → ``active``
 3. parts still missing → ``staged_incomplete``
 4. staged aggregate differs from the manifest → ``rejected:status_mismatch``
-5. approval missing or not valid for this revision → ``staged_awaiting_approval``
-6. approval valid and the parent is the current active revision → ``activated``
-7. approval valid and the parent differs → ``revision_conflict``
+5. a valid verifier attestation and the parent is current → ``activated``
+6. otherwise approval missing or not valid → ``staged_awaiting_approval``
+7. approval valid and the parent is the current active revision → ``activated``
+8. approval valid and the parent differs → ``revision_conflict``
 
-An ``activated`` commit fsyncs the rendered revision, then the activation
-record, and only then the ``active`` pointer. Readers trust a record only
-when it matches the pointer.
+A refused attestation does not block a valid approval. The refusal reason is
+returned on the result as ``attestation``. An attestation that authorizes
+the revision is written to ``.octopus-kb/attestations`` before the
+activation record.
+
+An ``activated`` commit fsyncs the rendered revision, then any attestation,
+then the activation record, and only then the ``active`` pointer. Readers
+trust a record only when it matches the pointer.
 """
 
 from __future__ import annotations
@@ -31,18 +37,21 @@ from jsonschema.exceptions import ValidationError
 
 from octopus_kb_compound.active import activation_prefix
 from octopus_kb_compound.approvals import (
+    KeyConfigurationError,
     load_approval_keys,
+    load_verifier_keys,
     logical_document_id,
     manifest_digest,
     part_digest,
     verify_approval,
+    verify_attestation,
 )
 from octopus_kb_compound.jsoncanon import canonical_bytes
 from octopus_kb_compound.models import PageMeta
 from octopus_kb_compound.frontmatter import render_frontmatter
 from octopus_kb_compound.resolver import VaultRootError, deployment_tenant, resolve_vault_id
 
-_RANK = {"consistent_unverified": 0, "completed_partial": 1}
+_RANK = {"succeeded": 0, "consistent_unverified": 1, "completed_partial": 2}
 _SCHEMA_DIR = Path(__file__).resolve().parent / "_schemas"
 
 # Tests set these. Production leaves them empty.
@@ -59,6 +68,7 @@ def ingest_envelope(
     manifest: dict,
     parts: list,
     approval: dict | None = None,
+    attestation: dict | None = None,
     *,
     now: datetime | None = None,
 ) -> dict:
@@ -87,13 +97,53 @@ def ingest_envelope(
         aggregate = _staged_aggregate(config.root, logical, revision, manifest)
         if aggregate != manifest["status"]:
             return {"status": "rejected:status_mismatch", "revision_id": revision}
-        if not _approval_ok(approval, manifest, moment):
-            return {"status": "staged_awaiting_approval", "revision_id": revision}
+        try:
+            verifier_keys = load_verifier_keys()
+        except KeyConfigurationError:
+            return {"status": "rejected:key_configuration", "revision_id": revision}
         parent = manifest["parent_revision_id"]
+        attest_reason = None
+        if attestation is not None:
+            staged = [
+                _staged_status(config.root, logical, revision, spec["index"])
+                for spec in manifest["parts"]
+            ]
+            verdict = verify_attestation(
+                attestation,
+                manifest,
+                verifier_keys,
+                tenant=deployment_tenant(),
+                vault_id=vault_id,
+                access_label=manifest["access_label"],
+                logical_document_id=logical,
+                staged_statuses=staged,
+                now=moment,
+            )
+            if verdict.ok:
+                conflict = _attestation_conflict(config.root, attestation)
+                if conflict is None and parent == pointer:
+                    _commit(config.root, manifest, approval, moment, attestation)
+                    return {"status": "activated", "revision_id": revision}
+                if conflict is None:
+                    return {"status": "revision_conflict", "revision_id": revision}
+                attest_reason = conflict
+            else:
+                attest_reason = verdict.reason
+        if not _approval_ok(approval, manifest, moment):
+            return _with_attestation(
+                {"status": "staged_awaiting_approval", "revision_id": revision},
+                attest_reason,
+            )
         if parent != pointer:
-            return {"status": "revision_conflict", "revision_id": revision}
+            return _with_attestation(
+                {"status": "revision_conflict", "revision_id": revision},
+                attest_reason,
+            )
         _commit(config.root, manifest, approval, moment)
-        return {"status": "activated", "revision_id": revision}
+        return _with_attestation(
+            {"status": "activated", "revision_id": revision},
+            attest_reason,
+        )
 
 
 def _invalid_reason(vault_id: str, manifest: object, parts: object) -> str | None:
@@ -228,7 +278,7 @@ def _staged_aggregate(root: Path, logical: str, revision: str, manifest: dict) -
 
 
 def aggregate_status(statuses: list[str]) -> str:
-    """Maximum of the ranked order. Only the two accepted statuses participate."""
+    """Maximum of the ranked order. Unranked statuses never participate."""
     if not statuses or any(status not in _RANK for status in statuses):
         raise ValueError("unranked_status")
     return max(statuses, key=_RANK.__getitem__)
@@ -264,7 +314,49 @@ def _approval_ok(approval: dict | None, manifest: dict, now: datetime) -> bool:
     return verdict.ok
 
 
-def _commit(root: Path, manifest: dict, approval: dict, now: datetime) -> None:
+def _staged_status(root: Path, logical: str, revision: str, index: int) -> str:
+    for part in _staged_parts(root, logical, revision):
+        if part.get("index") == index:
+            return str(part.get("ledger_status"))
+    return ""
+
+
+def _with_attestation(result: dict, reason: str | None) -> dict:
+    if reason is None:
+        return result
+    return {**result, "attestation": reason}
+
+
+def _attestation_conflict(root: Path, attestation: dict) -> str | None:
+    path = root / ".octopus-kb" / "attestations" / f"{attestation['attestation_id']}.json"
+    if not path.is_file():
+        return None
+    payload = canonical_bytes(attestation) + b"\n"
+    try:
+        existing = path.read_bytes()
+    except OSError:
+        return "attestation_conflict"
+    if existing != payload:
+        return "attestation_conflict"
+    return None
+
+
+def _write_attestation(root: Path, attestation: dict) -> None:
+    path = root / ".octopus-kb" / "attestations" / f"{attestation['attestation_id']}.json"
+    payload = canonical_bytes(attestation) + b"\n"
+    _mkdir_durable(path.parent)
+    if not path.is_file() or path.read_bytes() != payload:
+        _write_fsync(path, payload, "attestation")
+    _fsync_dir(path.parent, "attestation-dir")
+
+
+def _commit(
+    root: Path,
+    manifest: dict,
+    approval: dict | None,
+    now: datetime,
+    attestation: dict | None = None,
+) -> None:
     revision = manifest["revision_id"]
     logical = manifest["logical_document_id"]
     revision_dir = root / ".octopus-kb" / "revisions" / revision
@@ -296,17 +388,37 @@ def _commit(root: Path, manifest: dict, approval: dict, now: datetime) -> None:
     _write_fsync(revision_dir / "bindings.json", canonical_bytes(bindings) + b"\n", "revision-file")
     _fsync_dir(revision_dir, "revision-dir")
 
-    record = {
-        "revision_id": revision,
-        "approval_id": approval["approval_id"],
-        "parent_revision_id": manifest["parent_revision_id"],
-        "activated_at": _stamp(now),
-        "ledger_status": manifest["status"],
-        "logical_document_id": logical,
-        "access_label": manifest["access_label"],
-        "tenant": manifest["tenant"],
-        "vault_id": manifest["vault_id"],
-    }
+    if attestation is not None:
+        _write_attestation(root, attestation)
+        authority = {
+            "kind": "attestation",
+            "attestation_id": attestation["attestation_id"],
+            "key_id": attestation["key_id"],
+        }
+        record = {
+            "revision_id": revision,
+            "parent_revision_id": manifest["parent_revision_id"],
+            "activated_at": _stamp(now),
+            "ledger_status": manifest["status"],
+            "logical_document_id": logical,
+            "access_label": manifest["access_label"],
+            "tenant": manifest["tenant"],
+            "vault_id": manifest["vault_id"],
+            "authority": authority,
+        }
+    else:
+        record = {
+            "revision_id": revision,
+            "approval_id": approval["approval_id"],
+            "parent_revision_id": manifest["parent_revision_id"],
+            "activated_at": _stamp(now),
+            "ledger_status": manifest["status"],
+            "logical_document_id": logical,
+            "access_label": manifest["access_label"],
+            "tenant": manifest["tenant"],
+            "vault_id": manifest["vault_id"],
+            "authority": {"kind": "approval", "approval_id": approval["approval_id"]},
+        }
     record_path = root / ".octopus-kb" / "activations" / f"{logical}.jsonl"
     _mkdir_durable(record_path.parent)
     _append_fsync(record_path, canonical_bytes(record) + b"\n", "activation-record")
@@ -323,7 +435,8 @@ def _commit(root: Path, manifest: dict, approval: dict, now: datetime) -> None:
     _fsync_dir(active_dir, "active-dir")
 
 
-def _render_page(root: Path, revision_dir: Path, part: dict) -> str:
+def revision_page_text(part: dict) -> str:
+    """Rendered revision page authorized by a staged part."""
     title = str(part["part_id"])
     meta = PageMeta(
         title=title,
@@ -339,7 +452,11 @@ def _render_page(root: Path, revision_dir: Path, part: dict) -> str:
         ref = asset_reference(asset["asset_id"], asset["hash"])
         if ref not in body:
             body = f"{body}\n\n{ref}" if body else ref
-    text = f"{render_frontmatter(meta)}\n{body}\n" if body else f"{render_frontmatter(meta)}\n"
+    return f"{render_frontmatter(meta)}\n{body}\n" if body else f"{render_frontmatter(meta)}\n"
+
+
+def _render_page(root: Path, revision_dir: Path, part: dict) -> str:
+    text = revision_page_text(part)
     filename = f"{int(part['index']):04d}.md"
     _write_fsync(revision_dir / filename, text.encode("utf-8"), "revision-file")
     return (revision_dir / filename).resolve().relative_to(root.resolve()).as_posix()

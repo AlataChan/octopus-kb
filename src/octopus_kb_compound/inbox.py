@@ -48,7 +48,12 @@ def review_inbox(vault: Path | str, proposal_id: str) -> dict[str, Any]:
     }
 
 
-def accept_inbox(vault: Path | str, proposal_id: str) -> ApplyResult:
+def accept_inbox(
+    vault: Path | str,
+    proposal_id: str,
+    approval: dict[str, Any] | None = None,
+    now: datetime | None = None,
+) -> ApplyResult:
     root, proposal, inbox_path = _load_inbox_proposal(vault, proposal_id)
     verdict = _evaluate(root, proposal, human_override=True)
     if verdict.final != "pass":
@@ -72,6 +77,8 @@ def accept_inbox(vault: Path | str, proposal_id: str) -> ApplyResult:
         proposal,
         verdict=verdict,
         override={"overridden_rules": verdict.overridden_rules},
+        approval=approval,
+        now=now,
     )
     inbox_path.unlink(missing_ok=True)
     return result

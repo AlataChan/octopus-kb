@@ -34,6 +34,12 @@ from octopus_kb_compound.resolver import (
     vault_relative,
 )
 from octopus_kb_compound.frontmatter import parse_document
+from octopus_kb_compound.lineage import (
+    PartBindingError,
+    managed_source,
+    trusted_part_binding,
+    write_lineage,
+)
 from octopus_kb_compound import llm as llm_mod
 from octopus_kb_compound.llm import (
     ChatClient,
@@ -104,7 +110,8 @@ def propose_from_raw(
     source = require_inside(root, raw_file)
     _validate_inputs(source, root)
 
-    relative = vault_relative(root, source)
+    canonical = managed_source(root, source)
+    relative = canonical if canonical is not None else vault_relative(root, source)
     view = load_view(root)
     if is_revision_tree(relative):
         pinned = view.text_by_path.get(relative)
@@ -117,7 +124,7 @@ def propose_from_raw(
     raw_sha = hashlib.sha256(raw_bytes).hexdigest()
     raw_frontmatter, _ = parse_document(raw_body)
     raw_title = str(raw_frontmatter.get("title") or source.stem)
-    raw_rel_path = _relative_path(source, root)
+    raw_rel_path = relative if canonical is not None else _relative_path(source, root)
 
     try:
         config = load_config(root)
@@ -204,6 +211,7 @@ def propose_from_raw(
                 prompt_sha=prompt_sha,
             )
     saved = save_proposal(proposal, root)
+    write_lineage(root, proposal)
     return ProposeResult(
         proposal_id=str(proposal["id"]),
         path=saved.relative_to(root).as_posix(),
@@ -237,14 +245,33 @@ def _stamp_proposal(
 
 
 def propose_from_part(part: dict, vault: Path, *, profile_name: str | None = None) -> ProposeResult:
-    """Propose one envelope part. The prompt contains that part and no others."""
+    """Propose one envelope part. The prompt contains that part and no others.
+
+    The caller digest is recomputed and compared to the staged part before
+    any raw file is written and before a model is called.
+    """
     root = resolve_vault(vault)
-    body = str(part.get("body") or "")
-    digest = str(part.get("part_digest") or "")
-    source = root / ".octopus-kb" / "part-propose" / f"{digest or 'part'}.md"
+    if not isinstance(part, dict):
+        raise ProposeInputError("part_digest_mismatch")
+    claimed = part.get("part_digest")
+    if not isinstance(claimed, str) or not claimed:
+        raise ProposeInputError("part_digest_mismatch")
+    relpath = f".octopus-kb/part-propose/{claimed}.md"
+    try:
+        binding = trusted_part_binding(root, relpath, proposed=part)
+    except PartBindingError as exc:
+        raise ProposeInputError(exc.reason) from exc
+    source = root / (binding.raw_path if binding is not None else relpath)
     source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_text(body, encoding="utf-8")
-    return propose_from_raw(source, root, profile_name=profile_name, provenance=digest or source.name)
+    if binding is None:
+        source.write_text(str(part.get("body") or ""), encoding="utf-8")
+        provenance = claimed
+    else:
+        source.write_bytes(binding.raw_bytes)
+        provenance = str(binding.part.get("part_digest") or claimed)
+    if managed_source(root, source) is None:
+        raise ProposeInputError("unmanaged_part")
+    return propose_from_raw(source, root, profile_name=profile_name, provenance=provenance)
 
 
 def _request_proposal_json(

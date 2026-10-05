@@ -97,8 +97,9 @@ def ingest_envelope(
     manifest: dict,
     parts: list[dict],
     approval: dict | None = None,
+    attestation: dict | None = None,
 ) -> dict[str, Any]:
-    return _ingest_envelope(vault_id, manifest, parts, approval)
+    return _ingest_envelope(vault_id, manifest, parts, approval, attestation)
 
 
 def neighbors(vault: str | Path, page: str) -> dict[str, Any]:
@@ -121,10 +122,16 @@ def propose(vault: str | Path, raw_path: str, *, profile: dict[str, Any] | None 
     return propose_from_raw(source, root).to_dict()
 
 
-def validate(vault: str | Path, proposal_path: str, *, apply: bool = False) -> dict[str, Any]:
+def validate(
+    vault: str | Path,
+    proposal_path: str,
+    *,
+    apply: bool = False,
+    approval: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     root = resolve_vault(vault)
     proposal = require_inside(root, proposal_path)
-    return validate_proposal_file(proposal, root, apply=apply).to_dict()
+    return validate_proposal_file(proposal, root, apply=apply, approval=approval).to_dict()
 
 
 def healthcheck(vault: str | Path | None = None) -> dict[str, Any]:
