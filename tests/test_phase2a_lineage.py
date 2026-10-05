@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,7 +12,7 @@ import pytest
 from octopus_kb_compound.apply import apply_proposal
 from octopus_kb_compound.approvals import parse_private_key, public_key_b64
 from octopus_kb_compound.inbox import accept_inbox
-from octopus_kb_compound.lineage import file_sha256, write_lineage
+from octopus_kb_compound.lineage import assess_lineage, file_sha256, managed_source, write_lineage
 from octopus_kb_compound.propose import propose_from_part, propose_from_raw
 from octopus_kb_compound import envelope as envelope_mod
 
@@ -293,3 +294,60 @@ def test_succeeded_attestation_applies_and_approval_admission_is_rechecked(world
     later = datetime(2026, 10, 4, tzinfo=timezone.utc)
     assert apply_proposal(vault, body, approval=approved["approval"], now=later).message == "expired"
     assert apply_proposal(vault, body, approval=approved["approval"], now=NOW).status == "applied"
+
+
+def _park_inbox(vault: Path, proposal: dict) -> None:
+    inbox = vault / ".octopus-kb" / "inbox"
+    inbox.mkdir(parents=True, exist_ok=True)
+    (inbox / f"{proposal['id']}.json").write_text(json.dumps(proposal), encoding="utf-8")
+
+
+def test_deleted_managed_source_is_refused_by_apply_and_inbox(world, monkeypatch):
+    vault, reviewer, _verifier = world
+    _seed_wiki(vault)
+    _built, _result, page = _activate_partial(vault, reviewer)
+    proposed = _propose(monkeypatch, vault, page)
+    proposal = json.loads((vault / proposed.path).read_text(encoding="utf-8"))
+    assert assess_lineage(vault, proposal, approval=None, now=NOW).reason == "approval_required"
+    (vault / page).unlink()
+    refused = apply_proposal(vault, proposal, now=NOW)
+    assert refused.status == "rejected"
+    _park_inbox(vault, proposal)
+    inbox = accept_inbox(vault, proposal["id"], now=NOW)
+    assert inbox.status == "rejected"
+    legacy = {
+        "id": "legacy-deleted-source",
+        "created_at": "2026-04-18T00:00:00+00:00",
+        "source": {"kind": "raw_file", "path": "raw/x.md", "sha256": "a" * 64},
+        "produced_by": {"provider_profile": "p", "model": "m", "prompt_version": "p@x"},
+        "operations": [{
+            "op": "append_log",
+            "path": "wiki/LOG.md",
+            "entry": "2026-04-18: legacy",
+            "rationale": "r",
+            "confidence": 1.0,
+        }],
+        "status": "pending",
+    }
+    assert not (vault / ".octopus-kb" / "lineage" / "legacy-deleted-source.json").exists()
+    assert apply_proposal(vault, legacy, now=NOW).status == "applied"
+    assert _log(vault)[-1]["authority"]["kind"] == "unledgered"
+
+
+def test_hard_link_alias_is_lineage_gated_on_apply_and_inbox(world, monkeypatch):
+    vault, reviewer, _verifier = world
+    _seed_wiki(vault)
+    _built, _result, page = _activate_partial(vault, reviewer)
+    (vault / "raw").mkdir()
+    alias = vault / "raw" / "alias.md"
+    os.link(vault / page, alias)
+    assert os.path.samefile(alias, vault / page)
+    proposed = _propose(monkeypatch, vault, "raw/alias.md")
+    proposal = json.loads((vault / proposed.path).read_text(encoding="utf-8"))
+    refused = apply_proposal(vault, proposal, now=NOW)
+    assert refused.status == "rejected"
+    assert refused.message == "approval_required"
+    assert managed_source(vault, alias) == page
+    assert proposal["source"]["path"] == page
+    _park_inbox(vault, proposal)
+    assert accept_inbox(vault, proposal["id"], now=NOW).message == "approval_required"

@@ -36,10 +36,13 @@ class LineageDecision:
 def managed_source(root: Path, candidate: str | Path) -> str | None:
     """Vault-relative path when the file is inside a parser-managed directory.
 
-    Identity is the filesystem object, compared with ``os.path.samefile``.
-    The returned path uses the on-disk names of those directories. A case
-    variant, a ``./`` prefix, a ``..`` traversal, or a symlink alias of the
-    same file all return that one path. Anything else returns None.
+    Identity is the filesystem object, compared with ``os.path.samefile``
+    and, for a hard link, the source inode. The returned path uses the
+    on-disk names of those directories. A case variant, a ``./`` prefix, a
+    ``..`` traversal, or a symlink alias of the same file all return that
+    one path. A hard link to one managed file returns that file. A missing
+    path that is still lexically inside a managed directory stays managed.
+    Anything else returns None.
     """
     vault = Path(root).resolve()
     raw = Path(candidate)
@@ -47,42 +50,17 @@ def managed_source(root: Path, candidate: str | Path) -> str | None:
     try:
         real = leaf.resolve(strict=True)
     except OSError:
-        return None
+        return _lexical_managed(vault, leaf)
     if not real.is_file():
         return None
     try:
         real.relative_to(vault)
     except ValueError:
         return None
-    anchors = []
-    for name in MANAGED:
-        directory = vault / ".octopus-kb" / name
-        if not directory.is_dir():
-            continue
-        try:
-            anchors.append(directory.resolve())
-        except OSError:
-            continue
-    current = real.parent
-    matched = False
-    while True:
-        for anchor in anchors:
-            try:
-                if os.path.samefile(current, anchor):
-                    matched = True
-                    break
-            except OSError:
-                continue
-        if matched or current == vault or current.parent == current:
-            break
-        try:
-            current.relative_to(vault)
-        except ValueError:
-            break
-        current = current.parent
-    if not matched:
-        return None
-    return _on_disk_relative(vault, real)
+    located = _managed_by_directory(vault, real)
+    if located is not None:
+        return located
+    return _managed_by_inode(vault, real)
 
 
 def is_parser_managed(root: Path, path: str | Path) -> bool:
@@ -114,6 +92,82 @@ def _managed_items(root: Path, proposal: dict) -> list[dict]:
             continue
         found.append({**item, "path": canonical})
     return found
+
+
+def _managed_by_directory(vault: Path, real: Path) -> str | None:
+    anchors = []
+    for name in MANAGED:
+        directory = vault / ".octopus-kb" / name
+        if not directory.is_dir():
+            continue
+        try:
+            anchors.append(directory.resolve())
+        except OSError:
+            continue
+    current = real.parent
+    matched = False
+    while True:
+        for anchor in anchors:
+            try:
+                if os.path.samefile(current, anchor):
+                    matched = True
+                    break
+            except OSError:
+                continue
+        if matched or current == vault or current.parent == current:
+            break
+        try:
+            current.relative_to(vault)
+        except ValueError:
+            break
+        current = current.parent
+    if not matched:
+        return None
+    return _on_disk_relative(vault, real)
+
+
+def _lexical_managed(vault: Path, leaf: Path) -> str | None:
+    """Keep a deleted parser-managed path inside the gate."""
+    try:
+        real = leaf.resolve(strict=False)
+        rel = real.relative_to(vault)
+    except (OSError, ValueError):
+        return None
+    parts = rel.parts
+    if len(parts) >= 3 and parts[0] == ".octopus-kb" and parts[1] in MANAGED:
+        return rel.as_posix()
+    return None
+
+
+def _managed_by_inode(vault: Path, real: Path) -> str | None:
+    """Return the managed file that is the same inode as ``real``.
+
+    More than one managed name for that inode is ambiguous, so this returns
+    None only when nothing matches. Ambiguous names stay managed by the
+    first stable path; they do not become legacy input.
+    """
+    try:
+        identity = real.stat()
+    except OSError:
+        return None
+    matches: list[Path] = []
+    for name in MANAGED:
+        directory = vault / ".octopus-kb" / name
+        if not directory.is_dir():
+            continue
+        for path in directory.rglob("*"):
+            if not path.is_file() or path.is_symlink():
+                continue
+            try:
+                other = path.stat()
+            except OSError:
+                continue
+            if other.st_dev == identity.st_dev and other.st_ino == identity.st_ino:
+                matches.append(path)
+    if not matches:
+        return None
+    chosen = min(matches, key=lambda item: item.as_posix())
+    return _on_disk_relative(vault, chosen.resolve())
 
 
 def _on_disk_relative(vault: Path, real: Path) -> str:
@@ -211,9 +265,11 @@ def assess_lineage(
 ) -> LineageDecision:
     moment = now or datetime.now(timezone.utc)
     managed = _managed_items(root, proposal)
-    if not managed:
-        return LineageDecision(True, "unledgered", {"kind": "unledgered"})
     path = root / ".octopus-kb" / "lineage" / f"{proposal.get('id')}.json"
+    if not managed:
+        if path.is_file():
+            return LineageDecision(False, "lineage_stale", {"kind": "missing"})
+        return LineageDecision(True, "unledgered", {"kind": "unledgered"})
     if not path.is_file():
         return LineageDecision(False, "lineage_missing", {"kind": "missing"})
     try:
