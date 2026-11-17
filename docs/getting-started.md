@@ -8,6 +8,11 @@
 6. Use `scripts/bootstrap_vault.py` if you want to adopt the framework in an existing vault.
 7. Use `examples/expanded-vault/` when you need concept, entity, comparison, timeline, log, migration, and export examples in one place.
 
+四个技能都从执行前预检开始，规则位于各自的 `references/runtime-preflight.md`。
+安装或复制技能时，应保留完整技能目录，包括 `references/`，不能只复制 `SKILL.md`。
+预检会验证命令是否能运行，必要时使用源码后备入口，并分别记录工具位置与知识库路径。
+这是 Agent 应遵循的使用规则，不是加载技能时自动执行的安装钩子；预检本身不会安装依赖。
+
 ## Suggested First Run
 
 ```bash

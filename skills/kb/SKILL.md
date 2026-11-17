@@ -5,6 +5,15 @@ description: Operating procedure for octopus-kb knowledge bases. Use this skill 
 
 # Operating Procedure
 
+## 0. 执行前预检
+
+执行任何知识库操作前，先读取并遵循[统一预检规则](references/runtime-preflight.md)。
+即使本技能被单独调用，也必须先确定工具调用方式与知识库路径。
+同一任务中已有有效验证记录时直接复用；下文的 `octopus-kb` 均替换为已验证的调用前缀，
+命令工作目录使用知识库绝对路径，不假定全局安装、当前目录或激活状态。
+
+## Workflow
+
 1. Before any Grep or Read on `wiki/` or `raw/`, run:
    `octopus-kb retrieve-bundle "{task}" --vault . --json`
    Read pages in the returned order: schema → index → concepts → entities → raw_sources. Stop when you have enough context.

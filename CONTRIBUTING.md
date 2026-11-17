@@ -33,3 +33,12 @@ PYTHONPATH=src python3 -m octopus_kb_compound.cli lint examples/minimal-vault
 - Keep skills concise and trigger-focused.
 - Prefer deterministic helpers over vague automation claims.
 - Do not add decorative tags or duplicate canonical pages in the example vault.
+
+## Shared Skill Preflight
+
+Maintain the preflight protocol in `skills/kb/references/runtime-preflight.md`.
+Copy it unchanged into the same relative location in `kb-ingest`, `kb-maintain`,
+and `kb-retrieve`. These distribution copies keep each skill independently
+installable; do not replace them with cross-skill links or symlinks.
+Run `python -m pytest tests/test_skill_preflight.py tests/test_prompt_assets.py -q`
+to check local reference availability and prevent protocol drift.
